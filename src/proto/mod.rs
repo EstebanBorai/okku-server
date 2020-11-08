@@ -1,5 +1,2 @@
-mod input;
-mod output;
-
-pub use input::*;
-pub use output::*;
+pub mod input;
+pub mod output;

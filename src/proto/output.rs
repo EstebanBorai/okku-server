@@ -5,33 +5,33 @@ use uuid::Uuid;
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "type", content = "payload")]
 pub enum Output {
-  #[serde(rename = "error")]
-  Error(OutputError),
-  #[serde(rename = "alive")]
-  Alive,
-  #[serde(rename = "joined")]
-  Joined(JoinedOutput),
-  #[serde(rename = "user-joined")]
-  UserJoined(UserJoinedOutput),
-  #[serde(rename = "user-left")]
-  UserLeft(UserLeftOutput),
-  #[serde(rename = "posted")]
-  Posted(PostedOutput),
-  #[serde(rename = "user-posted")]
-  UserPosted(UserPostedOutput),
+    #[serde(rename = "error")]
+    Error(OutputError),
+    #[serde(rename = "alive")]
+    Alive,
+    #[serde(rename = "joined")]
+    Joined(JoinedOutput),
+    #[serde(rename = "user-joined")]
+    UserJoined(UserJoinedOutput),
+    #[serde(rename = "user-left")]
+    UserLeft(UserLeftOutput),
+    #[serde(rename = "posted")]
+    Posted(PostedOutput),
+    #[serde(rename = "user-posted")]
+    UserPosted(UserPostedOutput),
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "code")]
 pub enum OutputError {
-  #[serde(rename = "name-taken")]
-  NameTaken,
-  #[serde(rename = "invalid-name")]
-  InvalidName,
-  #[serde(rename = "not-joined")]
-  NotJoined,
-  #[serde(rename = "invalid-message-body")]
-  InvalidMessageBody,
+    #[serde(rename = "name-taken")]
+    NameTaken,
+    #[serde(rename = "invalid-name")]
+    InvalidName,
+    #[serde(rename = "not-joined")]
+    NotJoined,
+    #[serde(rename = "invalid-message-body")]
+    InvalidMessageBody,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -45,6 +45,12 @@ pub struct UserOutput {
 pub struct OutputParcel {
     pub client_id: Uuid,
     pub output: Output,
+}
+
+impl OutputParcel {
+    pub fn new(client_id: Uuid, output: Output) -> Self {
+        OutputParcel { client_id, output }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

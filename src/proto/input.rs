@@ -5,7 +5,9 @@ use uuid::Uuid;
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
 pub enum Input {
   #[serde(rename = "join")]
-  Join(JoinInput)
+  Join(JoinInput),
+  #[serde(rename = "post")]
+  Post(PostInput),
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
