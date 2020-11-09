@@ -41,18 +41,6 @@ pub struct UserOutput {
     pub name: String,
 }
 
-#[derive(Debug, Clone)]
-pub struct OutputParcel {
-    pub client_id: Uuid,
-    pub output: Output,
-}
-
-impl OutputParcel {
-    pub fn new(client_id: Uuid, output: Output) -> Self {
-        OutputParcel { client_id, output }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MessageOutput {

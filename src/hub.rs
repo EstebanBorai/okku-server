@@ -1,9 +1,10 @@
 use crate::model::{Feed, Message, User};
-use crate::proto::input::{Input, InputParcel, JoinInput, PostInput};
+use crate::proto::input::{Input, JoinInput, PostInput};
 use crate::proto::output::{
-    JoinedOutput, MessageOutput, Output, OutputError, OutputParcel, PostedOutput, UserJoinedOutput,
+    JoinedOutput, MessageOutput, Output, OutputError, PostedOutput, UserJoinedOutput,
     UserLeftOutput, UserOutput, UserPostedOutput,
 };
+use crate::proto::parcel::Parcel;
 use chrono::Utc;
 use futures::StreamExt;
 use lazy_static::lazy_static;
@@ -24,7 +25,7 @@ lazy_static! {
 
 pub struct Hub {
     pub alive_interval: Option<Duration>,
-    pub output_sender: broadcast::Sender<OutputParcel>,
+    pub output_sender: broadcast::Sender<Parcel<Output>>,
     pub users: RwLock<HashMap<Uuid, User>>,
     pub feed: RwLock<Feed>,
 }
@@ -49,7 +50,7 @@ impl Hub {
 
         self.users.read().await.keys().for_each(|user_id| {
             self.output_sender
-                .send(OutputParcel::new(*user_id, output.clone()))
+                .send(Parcel::new(*user_id, output.clone()))
                 .unwrap();
         });
     }
@@ -58,7 +59,7 @@ impl Hub {
     pub fn send_targeted(&self, client_id: Uuid, output: Output) {
         if self.output_sender.receiver_count() > 0 {
             self.output_sender
-                .send(OutputParcel::new(client_id, output))
+                .send(Parcel::new(client_id, output))
                 .unwrap();
         }
     }
@@ -76,7 +77,7 @@ impl Hub {
             .filter(|user| user.id != ignore)
             .for_each(|user| {
                 self.output_sender
-                    .send(OutputParcel::new(user.id, output.clone()))
+                    .send(Parcel::new(user.id, output.clone()))
                     .unwrap();
             });
     }
@@ -85,7 +86,7 @@ impl Hub {
         self.send_targeted(client_id, Output::Error(error));
     }
 
-    pub fn subscribe(&self) -> broadcast::Receiver<OutputParcel> {
+    pub fn subscribe(&self) -> broadcast::Receiver<Parcel<Output>> {
         self.output_sender.subscribe()
     }
 
@@ -115,7 +116,7 @@ impl Hub {
     /// This function will await for one of the created futures to
     /// finish, either `ticking_alive` and `process` and will delegate
     /// to `process` every `Input` received
-    pub async fn run(&self, receiver: UnboundedReceiver<InputParcel>) {
+    pub async fn run(&self, receiver: UnboundedReceiver<Parcel<Input>>) {
         let ticking_alive = self.tick_alive();
         let processing = receiver.for_each(|input_parcel| self.process(input_parcel));
 
@@ -126,10 +127,10 @@ impl Hub {
     }
 
     /// Processes `Input` values and derive them to its handlers
-    async fn process(&self, input_parcel: InputParcel) {
-        match input_parcel.input {
-            Input::Join(input) => self.process_join(input_parcel.client_id, input).await,
-            Input::Post(input) => self.process_post(input_parcel.client_id, input).await,
+    async fn process(&self, input_parcel: Parcel<Input>) {
+        match input_parcel.payload {
+            Input::Join(input) => self.process_join(input_parcel.id, input).await,
+            Input::Post(input) => self.process_post(input_parcel.id, input).await,
         }
     }
 
