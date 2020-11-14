@@ -3,6 +3,7 @@ extern crate log;
 
 use std::env;
 
+mod database;
 mod client;
 mod error;
 mod hub;
@@ -22,6 +23,10 @@ async fn main() {
         .expect("Missing PORT environment variable")
         .parse::<u16>()
         .expect("Invalid PORT value, expected u16");
+
+    let db_pool = database::create_pool().expect("Unable to create database pool");
+
+    database::init_db(db_pool).await;
 
     let server = server::Server::new(port);
 

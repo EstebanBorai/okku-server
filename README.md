@@ -14,9 +14,6 @@ for the Back-End and ReactJS for the Front-End.
 The main goal is to experiment with Web Sockets and the Rust programming
 language, taking advantage of the Tokio runtime.
 
-The implementation of the Back-End servier is based on
-[Tin Rabzelj's article "Building a Real-time Chat App in Rust and React"](https://outcrawl.com/rust-react-realtime-chat).
-
 ## Development
 
 In order to run this application locally Rust must be installed in your system.
@@ -64,3 +61,8 @@ msend.send(JSON.stringify({
   }
 }));
 ```
+
+## References
+
+* [Create an async CRUD web service in Rust with warp](https://blog.logrocket.com/create-an-async-crud-web-service-in-rust-with-warp/)
+* [Building a Real-time Chat App in Rust and React](https://outcrawl.com/rust-react-realtime-chat)
