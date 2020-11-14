@@ -9,6 +9,7 @@ use crate::proto::parcel::Parcel;
 use crate::proto::input::Input;
 use crate::proto::output::Output;
 
+/// Chat client identified by an UUID
 #[derive(Clone, Copy, Default)]
 pub struct Client {
     pub id: Uuid,
@@ -20,7 +21,7 @@ impl Client {
     }
 
     /// Reads the incoming `Stream` and attempts to
-    /// deserialize them into a `InputParcel`
+    /// deserialize it into an `Parcel<Input>`
     pub fn read_input(
         &self,
         stream: SplitStream<WebSocket>,

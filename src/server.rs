@@ -29,7 +29,7 @@ impl Server {
         let (input_sender, input_receiver) = mpsc::unbounded_channel::<Parcel<Input>>();
         let hub = self.hub.clone();
 
-        let feed = warp::path("feed")
+        let lobby = warp::path("lobby")
             .and(warp::ws())
             .and(warp::any().map(move || input_sender.clone()))
             .and(warp::any().map(move || hub.clone()))
@@ -50,7 +50,7 @@ impl Server {
         };
 
         let (_, serving) =
-            warp::serve(feed).bind_with_graceful_shutdown(([127, 0, 0, 1], self.port), shutdown);
+            warp::serve(lobby).bind_with_graceful_shutdown(([127, 0, 0, 1], self.port), shutdown);
 
         let running_hub = self.hub.run(input_receiver);
 
