@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
+dotenv = "0.15.0"
 env_logger = "0.7"
 futures = "0.3"
 lazy_static = "1"

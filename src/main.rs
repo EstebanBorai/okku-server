@@ -12,14 +12,22 @@ mod server;
 
 #[tokio::main]
 async fn main() {
-    // this is temporal and I should change it to dotenv
-    // or some config at some point in time
-    env::set_var("RUST_LOG", "warn,info,error,debug");
+    dotenv::dotenv()
+        .ok()
+        .expect("Unable to find .env file. Create one based on the .env.sample");
     env_logger::init();
 
-    let server = server::Server::new(8080);
+    let port = env::var("PORT")
+        .expect("Missing PORT environment variable")
+        .parse::<u16>()
+        .expect("Invalid PORT value, expected u16");
 
-    info!("Serving msend server on: ws://127.0.0.1:8080/");
+    let server = server::Server::new(port);
+
+    info!(
+        "{}",
+        format!("Server listening on: ws://127.0.0.1:{}", port)
+    );
 
     server.run().await;
 }

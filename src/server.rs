@@ -6,6 +6,7 @@ use tokio::sync::mpsc::{self, UnboundedSender};
 use tokio::time::Duration;
 use warp::ws::WebSocket;
 use warp::Filter;
+use warp::http::StatusCode;
 
 use crate::client::Client;
 use crate::hub::Hub;
@@ -42,6 +43,9 @@ impl Server {
                     })
                 },
             );
+
+        let health = warp::path("health")
+            .map(|| StatusCode::OK);
 
         let shutdown = async {
             tokio::signal::ctrl_c()
