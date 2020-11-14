@@ -2,11 +2,11 @@ version: '3'
 
 services:
   database:
-    build: ./.docker
+    build: ./docker
     ports:
       - "5432:5432"
     volumes:
-       - whizzes-database:/var/lib/postgresql/data
+       - msend-database:/var/lib/postgresql/data
     env_file:
       - .env
     environment:
@@ -15,4 +15,4 @@ services:
       POSTGRES_DB: "${POSTGRES_DB}"
 
 volumes:
-  whizzes-database:
+  msend-database:

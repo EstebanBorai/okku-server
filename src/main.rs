@@ -15,7 +15,8 @@ async fn main() {
     dotenv::dotenv()
         .ok()
         .expect("Unable to find .env file. Create one based on the .env.sample");
-    env_logger::init();
+
+        env_logger::init();
 
     let port = env::var("PORT")
         .expect("Missing PORT environment variable")
