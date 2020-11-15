@@ -50,10 +50,10 @@ pub async fn get_db_conn(db_pool: &DbPool) -> DbConn {
 }
 
 pub async fn init_db(db_pool: &DbPool) -> Result<()> {
-    let init_file = read_to_string("./init.sql")?;
+    // let init_file = read_to_string("./database/init.sql")?;
     let conn = get_db_conn(db_pool).await;
 
-    conn.batch_execute(init_file.as_str())
+    conn.batch_execute("CREATE TABLE users (id UUID);")
         .await
         .unwrap();
 
