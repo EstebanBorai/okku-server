@@ -5,9 +5,9 @@ use uuid::Uuid;
 use warp::filters::ws::WebSocket;
 
 use crate::error::{Error, Result};
-use crate::proto::parcel::Parcel;
 use crate::proto::input::Input;
 use crate::proto::output::Output;
+use crate::proto::parcel::Parcel;
 
 #[derive(Clone, Copy, Default)]
 pub struct Client {
@@ -47,7 +47,8 @@ impl Client {
 
     pub fn write_output<S, E>(&self, stream: S) -> impl Stream<Item = Result<warp::ws::Message>>
     where
-        S: TryStream<Ok = Parcel<Output>, Error = E> + Stream<Item = result::Result<Parcel<Output>, E>>,
+        S: TryStream<Ok = Parcel<Output>, Error = E>
+            + Stream<Item = result::Result<Parcel<Output>, E>>,
         E: error::Error,
     {
         let client_id = self.id;

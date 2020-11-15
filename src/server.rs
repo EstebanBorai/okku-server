@@ -9,8 +9,8 @@ use warp::Filter;
 
 use crate::client::Client;
 use crate::hub::Hub;
-use crate::proto::parcel::Parcel;
 use crate::proto::input::Input;
+use crate::proto::parcel::Parcel;
 
 pub struct Server {
     port: u16,
