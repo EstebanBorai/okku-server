@@ -1,3 +1,4 @@
+use crate::error::Result;
 use mobc::{Connection, Pool};
 use mobc_postgres::{tokio_postgres, PgConnectionManager};
 use std::env;
@@ -9,8 +10,6 @@ use tokio_postgres::{Config, Error, NoTls};
 const DB_POOL_MAX_OPEN: u64 = 32;
 const DB_POOL_MAX_IDLE: u64 = 8;
 const DB_POOL_TIMEOUT_SECONDS: u64 = 15;
-
-type Result<T> = std::result::Result<T, dyn std::error::Error>;
 
 pub type DbConn = Connection<PgConnectionManager<NoTls>>;
 pub type DbPool = Pool<PgConnectionManager<NoTls>>;
@@ -46,13 +45,13 @@ pub fn create_pool() -> std::result::Result<DbPool, mobc::Error<Error>> {
 }
 
 /// Gathers a database connection from the database pool
-pub async fn get_db_conn(db_pool: &DbPool) -> Result<DbConn> {
-    db_pool.get().await?
+pub async fn get_db_conn(db_pool: &DbPool) -> DbConn {
+    db_pool.get().await.unwrap()
 }
 
 pub async fn init_db(db_pool: &DbPool) -> Result<()> {
     let init_file = read_to_string("./init.sql")?;
-    let conn = get_db_conn(db_pool).await?;
+    let conn = get_db_conn(db_pool).await;
 
     conn.batch_execute(init_file.as_str())
         .await

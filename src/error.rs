@@ -2,6 +2,8 @@ use std::{error, fmt, io, result};
 
 use serde::export::Formatter;
 
+pub type Result<T> = result::Result<T, Error>;
+
 #[derive(Debug)]
 pub enum Error {
     System(String),
@@ -32,5 +34,3 @@ impl From<serde_json::Error> for Error {
         Error::Message(err)
     }
 }
-
-pub type Result<T> = result::Result<T, Error>;

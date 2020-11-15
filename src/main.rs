@@ -26,7 +26,7 @@ async fn main() {
 
     let db_pool = database::create_pool().expect("Unable to create database pool");
 
-    database::init_db(db_pool).await;
+    database::init_db(&db_pool).await.expect("Unable to initialize database");
 
     let server = server::Server::new(port);
 
