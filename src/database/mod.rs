@@ -4,6 +4,7 @@ use mobc_postgres::{tokio_postgres, PgConnectionManager};
 use std::env;
 use std::str::FromStr;
 use std::time::Duration;
+use std::fs::canonicalize;
 use std::fs::read_to_string;
 use tokio_postgres::{Config, Error, NoTls};
 
@@ -50,10 +51,10 @@ pub async fn get_db_conn(db_pool: &DbPool) -> DbConn {
 }
 
 pub async fn init_db(db_pool: &DbPool) -> Result<()> {
-    // let init_file = read_to_string("./database/init.sql")?;
+    let init_query = read_to_string(canonicalize("./src/database/init.sql").unwrap())?;
     let conn = get_db_conn(db_pool).await;
 
-    conn.batch_execute("CREATE TABLE users (id UUID);")
+    conn.batch_execute(init_query.as_str())
         .await
         .unwrap();
 
