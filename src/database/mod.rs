@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use lazy_static::lazy_static;
 use mobc::{Connection, Pool};
 use mobc_postgres::{tokio_postgres, PgConnectionManager};
 use std::env;
@@ -14,6 +15,12 @@ const DB_POOL_TIMEOUT_SECONDS: u64 = 15;
 
 pub type DbConn = Connection<PgConnectionManager<NoTls>>;
 pub type DbPool = Pool<PgConnectionManager<NoTls>>;
+
+lazy_static! {
+    static ref DB_POOL: DbPool = {
+        create_pool().context("Unable to create DbPool.").unwrap()
+    };
+}
 
 /// Builds a Postgres connection pool and defines configurations such
 /// as minimum and maximum open connections, and connection timeout
@@ -46,8 +53,13 @@ pub fn create_pool() -> Result<DbPool> {
 }
 
 /// Gathers a database connection from the database pool
-pub async fn get_db_conn(db_pool: &DbPool) -> Result<DbConn> {
-    Ok(db_pool.get().await?)
+///
+/// Read more on `tokio_postgres` for details on the API
+/// avaiable on the underlying `DbConn` type
+///
+/// [tokio_postgres](https://docs.rs/tokio-postgres/0.5.5/tokio_postgres/index.html)
+pub async fn get_db_conn() -> Result<DbConn> {
+    Ok(DB_POOL.get().await?)
 }
 
 /// Initializes the database.
@@ -56,9 +68,9 @@ pub async fn get_db_conn(db_pool: &DbPool) -> Result<DbConn> {
 ///
 /// Then gets a connection from the Database Connection Pool
 /// and executes the `init.sql` query.
-pub async fn init_db(db_pool: &DbPool) -> Result<()> {
+pub async fn init_db() -> Result<()> {
     let init_query = read_to_string(canonicalize("./src/database/init.sql")?)?;
-    let conn = get_db_conn(db_pool)
+    let conn = get_db_conn()
         .await
         .context("Unable to get a connection from the pool")?;
 

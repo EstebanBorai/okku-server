@@ -24,9 +24,7 @@ async fn main() -> Result<()> {
         .parse::<u16>()
         .expect("Invalid PORT value, expected u16");
 
-    let db_pool = database::create_pool().expect("Unable to create database pool");
-
-    database::init_db(&db_pool)
+    database::init_db()
         .await
         .expect("Unable to initialize database");
 
