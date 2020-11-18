@@ -1,16 +1,16 @@
-use std::sync::Arc;
-
+use crate::client::Client;
+use crate::hub::Hub;
+use crate::proto::input::Input;
+use crate::proto::parcel::Parcel;
 use futures::{StreamExt, TryStreamExt};
 use log::{error, info};
+use std::sync::Arc;
 use tokio::sync::mpsc::{self, UnboundedSender};
 use tokio::time::Duration;
 use warp::ws::WebSocket;
 use warp::Filter;
 
-use crate::client::Client;
-use crate::hub::Hub;
-use crate::proto::input::Input;
-use crate::proto::parcel::Parcel;
+mod handler;
 
 pub struct Server {
     port: u16,
@@ -29,7 +29,7 @@ impl Server {
         let (input_sender, input_receiver) = mpsc::unbounded_channel::<Parcel<Input>>();
         let hub = self.hub.clone();
 
-        let feed = warp::path("feed")
+        let chat = warp::path("chat")
             .and(warp::ws())
             .and(warp::any().map(move || input_sender.clone()))
             .and(warp::any().map(move || hub.clone()))
@@ -38,10 +38,26 @@ impl Server {
                       input_sender: UnboundedSender<Parcel<Input>>,
                       hub: Arc<Hub>| {
                     ws.on_upgrade(move |web_socket| async move {
-                        tokio::spawn(Self::process_client(hub, web_socket, input_sender));
+                        tokio::spawn(Server::process_client(hub, web_socket, input_sender));
                     })
                 },
             );
+
+        let health = warp::path("health").and(warp::get().and_then(handler::health::check));
+        let auth = warp::path("auth").and(
+            warp::path("signup")
+                .and_then(handler::auth::signup)
+                .or(warp::path("login").and_then(handler::auth::login)),
+        );
+
+        let api = warp::path("api");
+        let v1 = warp::path("v1");
+        let users = api
+            .and(v1)
+            .and(warp::path("users"))
+            .and(warp::get().and_then(handler::user::users));
+
+        let routes = chat.or(auth).or(health).or(users);
 
         let shutdown = async {
             tokio::signal::ctrl_c()
@@ -50,7 +66,7 @@ impl Server {
         };
 
         let (_, serving) =
-            warp::serve(feed).bind_with_graceful_shutdown(([127, 0, 0, 1], self.port), shutdown);
+            warp::serve(routes).bind_with_graceful_shutdown(([127, 0, 0, 1], self.port), shutdown);
 
         let running_hub = self.hub.run(input_receiver);
 

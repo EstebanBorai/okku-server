@@ -4,11 +4,11 @@ extern crate log;
 use anyhow::Result;
 use std::env;
 
-mod client;
 mod database;
-mod hub;
 mod model;
 mod proto;
+mod client;
+mod hub;
 mod server;
 
 #[tokio::main]
