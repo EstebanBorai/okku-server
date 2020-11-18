@@ -1,4 +1,4 @@
-use crate::error::Result;
+use anyhow::{Context, Result};
 use mobc::{Connection, Pool};
 use mobc_postgres::{tokio_postgres, PgConnectionManager};
 use std::env;
@@ -6,7 +6,7 @@ use std::fs::canonicalize;
 use std::fs::read_to_string;
 use std::str::FromStr;
 use std::time::Duration;
-use tokio_postgres::{Config, Error, NoTls};
+use tokio_postgres::{Config, NoTls};
 
 const DB_POOL_MAX_OPEN: u64 = 32;
 const DB_POOL_MAX_IDLE: u64 = 8;
@@ -23,7 +23,7 @@ pub type DbPool = Pool<PgConnectionManager<NoTls>>;
 /// * `POSTGRES_USER`
 /// * `POSTGRES_PASSWORD`
 /// * `POSTGRES_DB`
-pub fn create_pool() -> std::result::Result<DbPool, mobc::Error<Error>> {
+pub fn create_pool() -> Result<DbPool> {
     let db_username = env::var("POSTGRES_USER").expect("Missing POSTGRES_USER env variable");
     let db_password =
         env::var("POSTGRES_PASSWORD").expect("Missing POSTGRES_PASSWORD env variable");
@@ -46,15 +46,23 @@ pub fn create_pool() -> std::result::Result<DbPool, mobc::Error<Error>> {
 }
 
 /// Gathers a database connection from the database pool
-pub async fn get_db_conn(db_pool: &DbPool) -> DbConn {
-    db_pool.get().await.unwrap()
+pub async fn get_db_conn(db_pool: &DbPool) -> Result<DbConn> {
+    Ok(db_pool.get().await?)
 }
 
+/// Initializes the database.
+/// First reads the "init.sql" query available
+/// on the `src/database/init.sql` file.
+///
+/// Then gets a connection from the Database Connection Pool
+/// and executes the `init.sql` query.
 pub async fn init_db(db_pool: &DbPool) -> Result<()> {
-    let init_query = read_to_string(canonicalize("./src/database/init.sql").unwrap())?;
-    let conn = get_db_conn(db_pool).await;
+    let init_query = read_to_string(canonicalize("./src/database/init.sql")?)?;
+    let conn = get_db_conn(db_pool)
+        .await
+        .context("Unable to get a connection from the pool")?;
 
-    conn.batch_execute(init_query.as_str()).await.unwrap();
+    conn.batch_execute(init_query.as_str()).await?;
 
     Ok(())
 }

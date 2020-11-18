@@ -1,10 +1,9 @@
+use anyhow::{Error, Result};
 use futures::stream::SplitStream;
 use futures::{future, Stream, StreamExt, TryStream, TryStreamExt};
-use std::{error, result};
 use uuid::Uuid;
 use warp::filters::ws::WebSocket;
 
-use crate::error::{Error, Result};
 use crate::proto::input::Input;
 use crate::proto::output::Output;
 use crate::proto::parcel::Parcel;
@@ -36,10 +35,11 @@ impl Client {
                 })
             })
             .map(move |message| match message {
-                Err(err) => Err(Error::System(err.to_string())),
+                Err(err) => Err(Error::new(err)),
                 Ok(message) => {
                     let input = serde_json::from_str(message.to_str().unwrap()).unwrap();
                     info!("Received: {:?}", input);
+
                     Ok(Parcel::new(client_id, input))
                 }
             })
@@ -48,8 +48,8 @@ impl Client {
     pub fn write_output<S, E>(&self, stream: S) -> impl Stream<Item = Result<warp::ws::Message>>
     where
         S: TryStream<Ok = Parcel<Output>, Error = E>
-            + Stream<Item = result::Result<Parcel<Output>, E>>,
-        E: error::Error,
+            + Stream<Item = Result<Parcel<Output>, E>>,
+        E: std::error::Error,
     {
         let client_id = self.id;
 
@@ -60,6 +60,6 @@ impl Client {
 
                 warp::ws::Message::text(data)
             })
-            .map_err(|err| Error::System(err.to_string()))
+            .map_err(|err| Error::msg(err.to_string()))
     }
 }

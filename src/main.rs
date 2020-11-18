@@ -1,18 +1,18 @@
 #[macro_use]
 extern crate log;
 
+use anyhow::Result;
 use std::env;
 
 mod client;
 mod database;
-mod error;
 mod hub;
 mod model;
 mod proto;
 mod server;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     dotenv::dotenv()
         .ok()
         .expect("Unable to find .env file. Create one based on the .env.sample");
@@ -38,4 +38,6 @@ async fn main() {
     );
 
     server.run().await;
+
+    Ok(())
 }
