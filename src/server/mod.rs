@@ -11,6 +11,7 @@ use warp::ws::WebSocket;
 use warp::Filter;
 
 mod handler;
+mod http_response;
 
 pub struct Server {
     port: u16,
@@ -46,6 +47,8 @@ impl Server {
         let health = warp::path("health").and(warp::get().and_then(handler::health::check));
         let auth = warp::path("auth").and(
             warp::path("signup")
+                .and(warp::post())
+                .and(warp::body::json())
                 .and_then(handler::auth::signup)
                 .or(warp::path("login").and_then(handler::auth::login)),
         );

@@ -47,8 +47,7 @@ impl Client {
 
     pub fn write_output<S, E>(&self, stream: S) -> impl Stream<Item = Result<warp::ws::Message>>
     where
-        S: TryStream<Ok = Parcel<Output>, Error = E>
-            + Stream<Item = Result<Parcel<Output>, E>>,
+        S: TryStream<Ok = Parcel<Output>, Error = E> + Stream<Item = Result<Parcel<Output>, E>>,
         E: std::error::Error,
     {
         let client_id = self.id;

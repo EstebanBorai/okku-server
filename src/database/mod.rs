@@ -16,10 +16,10 @@ const DB_POOL_TIMEOUT_SECONDS: u64 = 15;
 pub type DbConn = Connection<PgConnectionManager<NoTls>>;
 pub type DbPool = Pool<PgConnectionManager<NoTls>>;
 
+pub type Row = tokio_postgres::Row;
+
 lazy_static! {
-    static ref DB_POOL: DbPool = {
-        create_pool().context("Unable to create DbPool.").unwrap()
-    };
+    static ref DB_POOL: DbPool = create_pool().context("Unable to create DbPool.").unwrap();
 }
 
 /// Builds a Postgres connection pool and defines configurations such
