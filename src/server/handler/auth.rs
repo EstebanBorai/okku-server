@@ -1,10 +1,9 @@
 use crate::database::{get_db_conn, Row};
 use crate::model::User;
 use crate::server::http_response::HttpResponse;
-use anyhow::{Error, Result};
-use argon2::{self, Config};
+use crate::utils::security;
+use anyhow::Result;
 use http_auth_basic::Credentials;
-use rand::{thread_rng, Rng};
 use serde::Deserialize;
 use uuid::Uuid;
 use warp::http::StatusCode;
@@ -42,7 +41,7 @@ pub async fn signup(
                 .unwrap();
 
             let user_id: Uuid = user_insert_rows.get(0);
-            let hash = make_hash(user_register.password.as_bytes()).unwrap();
+            let hash = security::make_hash(user_register.password.as_bytes()).unwrap();
 
             db_conn
                 .query(
@@ -58,7 +57,7 @@ pub async fn signup(
             };
 
             Ok(HttpResponse::with_payload(
-                created_user,
+                security::Jwt::from_user(&created_user).expect("Unable to create JWT"),
                 StatusCode::CREATED,
             ))
         }
@@ -96,12 +95,12 @@ pub async fn login(
                 let user_name: String = result_row.get(1);
                 let user_hash: String = result_row.get(2);
 
-                if verify_hash(&user_hash, credentials.password.as_bytes()) {
+                if security::verify_hash(&user_hash, credentials.password.as_bytes()) {
                     return Ok(HttpResponse::with_payload(
-                        User {
+                        security::Jwt::from_user(&User {
                             id: user_id,
                             name: user_name,
-                        },
+                        }).expect("Unable to create JWT"),
                         StatusCode::OK,
                     ));
                 }
@@ -119,18 +118,4 @@ pub async fn login(
         }
         Err(err) => Ok(HttpResponse::new(&err.to_string(), StatusCode::BAD_REQUEST)),
     }
-}
-
-fn make_hash(password: &[u8]) -> Result<String> {
-    let conf = Config::default();
-    let salt = thread_rng().gen::<[u8; 32]>();
-
-    match argon2::hash_encoded(password, &salt, &conf) {
-        Ok(hash) => Ok(hash),
-        Err(err) => Err(Error::msg(err.to_string())),
-    }
-}
-
-fn verify_hash(hash: &str, password: &[u8]) -> bool {
-    argon2::verify_encoded(hash, password).unwrap_or(false)
 }
