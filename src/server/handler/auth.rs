@@ -3,6 +3,7 @@ use crate::model::User;
 use crate::server::http_response::HttpResponse;
 use anyhow::{Error, Result};
 use argon2::{self, Config};
+use http_auth_basic::Credentials;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -68,9 +69,56 @@ pub async fn signup(
     }
 }
 
-pub async fn login() -> Result<impl warp::Reply, std::convert::Infallible> {
-    tokio::time::delay_for(std::time::Duration::from_secs(10)).await;
-    Ok(format!("I waited {} seconds!", 10))
+pub async fn login(
+    auth_header_value: String,
+) -> Result<impl warp::Reply, std::convert::Infallible> {
+    match Credentials::from_header(auth_header_value) {
+        Ok(credentials) => {
+            let db_conn = get_db_conn().await.unwrap();
+
+            if let Ok(result_row) = db_conn
+                .query_one(
+                    r#"
+                    SELECT
+                        users.id,
+                        users.name,
+                        secrets.hash
+                    FROM
+                        users
+                        LEFT JOIN secrets ON secrets.user_id = users.id
+                    WHERE
+                        users.name = $1"#,
+                    &[&credentials.user_id],
+                )
+                .await
+            {
+                let user_id: Uuid = result_row.get(0);
+                let user_name: String = result_row.get(1);
+                let user_hash: String = result_row.get(2);
+
+                if verify_hash(&user_hash, credentials.password.as_bytes()) {
+                    return Ok(HttpResponse::with_payload(
+                        User {
+                            id: user_id,
+                            name: user_name,
+                        },
+                        StatusCode::OK,
+                    ));
+                }
+
+                Ok(HttpResponse::new(
+                    "Invalid username/password",
+                    StatusCode::FORBIDDEN,
+                ))
+            } else {
+                Ok(HttpResponse::new(
+                    "Username doesn't exists",
+                    StatusCode::BAD_REQUEST,
+                ))
+            }
+        }
+        Err(err) => Ok(HttpResponse::new(&err.to_string(), StatusCode::BAD_REQUEST)),
+    }
 }
 
 fn make_hash(password: &[u8]) -> Result<String> {
@@ -81,4 +129,8 @@ fn make_hash(password: &[u8]) -> Result<String> {
         Ok(hash) => Ok(hash),
         Err(err) => Err(Error::msg(err.to_string())),
     }
+}
+
+fn verify_hash(hash: &str, password: &[u8]) -> bool {
+    argon2::verify_encoded(hash, password).unwrap_or(false)
 }

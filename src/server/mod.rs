@@ -50,7 +50,10 @@ impl Server {
                 .and(warp::post())
                 .and(warp::body::json())
                 .and_then(handler::auth::signup)
-                .or(warp::path("login").and_then(handler::auth::login)),
+                .or(warp::path("login")
+                    .and(warp::get())
+                    .and(warp::header::<String>("authorization"))
+                    .and_then(handler::auth::login)),
         );
 
         let api = warp::path("api");
