@@ -13,6 +13,9 @@ use warp::Filter;
 mod handler;
 mod http_response;
 
+/// Max size for Avatar file. 3 MB in bytes
+const MAX_AVATAR_IMAGE_SIZE: u64 = 3_000_000;
+
 pub struct Server {
     port: u16,
     hub: Arc<Hub>,
@@ -60,10 +63,15 @@ impl Server {
         let v1 = warp::path("v1");
         let users = api
             .and(v1)
-            .and(warp::path("users"))
-            .and(warp::get().and_then(handler::user::users));
+            .and(warp::path("users"));
 
-        let routes = chat.or(auth).or(health).or(users);
+        let users_avatar = users.and(warp::path("avatar"))
+            .and(warp::post())
+            .and(warp::path::param())
+            .and(warp::multipart::form().max_length(MAX_AVATAR_IMAGE_SIZE))
+            .and_then(handler::user::upload_avatar);
+
+        let routes = chat.or(auth).or(health).or(users_avatar);
 
         let shutdown = async {
             tokio::signal::ctrl_c()

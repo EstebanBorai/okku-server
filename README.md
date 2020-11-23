@@ -70,3 +70,4 @@ started with Rust and Warp.
 * [Create an async CRUD web service in Rust with warp](https://blog.logrocket.com/create-an-async-crud-web-service-in-rust-with-warp/)
 * [Building a Real-time Chat App in Rust and React](https://outcrawl.com/rust-react-realtime-chat)
 * [Let's make a simple authentication server in Rust with Warp](https://blog.joco.dev/posts/warp_auth_server_tutorial)
+* [File upload and download in Rust](https://blog.logrocket.com/file-upload-and-download-in-rust/)
