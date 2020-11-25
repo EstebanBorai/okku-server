@@ -4,13 +4,13 @@ extern crate log;
 use anyhow::Result;
 use std::env;
 
+mod client;
 mod database;
+mod hub;
 mod model;
 mod proto;
 mod server;
 mod utils;
-mod client;
-mod hub;
 
 #[tokio::main]
 async fn main() -> Result<()> {

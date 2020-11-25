@@ -1,7 +1,9 @@
 use crate::model::User;
 use anyhow::{Error, Result};
 use argon2::{self, Config};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation, errors::ErrorKind as JwtErrorKind};
+use jsonwebtoken::{
+    decode, encode, errors::ErrorKind as JwtErrorKind, DecodingKey, EncodingKey, Header, Validation,
+};
 use lazy_static::lazy_static;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -64,7 +66,7 @@ impl Jwt {
             Err(err) => match *err.kind() {
                 JwtErrorKind::InvalidToken => Err(Error::msg("Token is invalid")),
                 JwtErrorKind::InvalidIssuer => Err(Error::msg("Invalid issuer")),
-                _ => Err(Error::msg("An error ocurred verifying the JWT"))
+                _ => Err(Error::msg("An error ocurred verifying the JWT")),
             },
         }
     }

@@ -100,7 +100,8 @@ pub async fn login(
                         security::Jwt::from_user(&User {
                             id: user_id,
                             name: user_name,
-                        }).expect("Unable to create JWT"),
+                        })
+                        .expect("Unable to create JWT"),
                         StatusCode::OK,
                     ));
                 }

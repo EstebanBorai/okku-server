@@ -61,17 +61,27 @@ impl Server {
 
         let api = warp::path("api");
         let v1 = warp::path("v1");
-        let users = api
-            .and(v1)
-            .and(warp::path("users"));
+        let users = api.and(v1).and(warp::path("users"));
 
-        let users_avatar = users.and(warp::path("avatar"))
+        let users_avatar = users.and(warp::path("avatar"));
+
+        let upload_avatar = users_avatar
             .and(warp::post())
             .and(warp::path::param())
             .and(warp::multipart::form().max_length(MAX_AVATAR_IMAGE_SIZE))
             .and_then(handler::user::upload_avatar);
 
-        let routes = chat.or(auth).or(health).or(users_avatar);
+        let download_avatar = users_avatar.and(
+            warp::get()
+                .and(warp::path::param())
+                .and_then(handler::user::download_avatar),
+        );
+
+        let routes = chat
+            .or(auth)
+            .or(health)
+            .or(upload_avatar)
+            .or(download_avatar);
 
         let shutdown = async {
             tokio::signal::ctrl_c()
