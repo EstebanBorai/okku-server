@@ -71,6 +71,12 @@ impl Server {
             .and(warp::multipart::form().max_length(MAX_AVATAR_IMAGE_SIZE))
             .and_then(handler::user::upload_avatar);
 
+        let update_avatar = users_avatar
+            .and(warp::put())
+            .and(warp::path::param())
+            .and(warp::multipart::form().max_length(MAX_AVATAR_IMAGE_SIZE))
+            .and_then(handler::user::replace_avatar);
+
         let download_avatar = users_avatar.and(
             warp::get()
                 .and(warp::path::param())
@@ -81,7 +87,8 @@ impl Server {
             .or(auth)
             .or(health)
             .or(upload_avatar)
-            .or(download_avatar);
+            .or(download_avatar)
+            .or(update_avatar);
 
         let shutdown = async {
             tokio::signal::ctrl_c()
