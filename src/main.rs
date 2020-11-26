@@ -10,6 +10,7 @@ mod hub;
 mod model;
 mod proto;
 mod server;
+mod service;
 mod utils;
 
 #[tokio::main]

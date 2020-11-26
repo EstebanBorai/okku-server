@@ -1,5 +1,7 @@
 use crate::database::get_db_conn;
+use crate::model::{Avatar, AvatarMIMEType};
 use crate::server::http_response::HttpResponse;
+use crate::service::InjectedServices;
 use anyhow::{Error, Result as AnyhowResult};
 use bytes::BufMut;
 use futures::TryStreamExt;
@@ -9,21 +11,11 @@ use warp::filters::multipart::{FormData, Part};
 use warp::http::StatusCode;
 use warp::reject::Rejection;
 
-enum AvatarMIMEType {
-    Png,
-    Jpeg,
-}
-
-impl ToString for AvatarMIMEType {
-    fn to_string(&self) -> String {
-        match self {
-            AvatarMIMEType::Png => String::from("image/png"),
-            AvatarMIMEType::Jpeg => String::from("image/jpeg"),
-        }
-    }
-}
-
-pub async fn upload_avatar(uid: Uuid, form: FormData) -> Result<impl warp::Reply, Rejection> {
+pub async fn upload_avatar(
+    services: InjectedServices,
+    uid: Uuid,
+    form: FormData,
+) -> Result<impl warp::Reply, Rejection> {
     let parts: Vec<Part> = form.try_collect().await.map_err(|error| {
         eprintln!("Form Read Error: {}", error);
         warp::reject::reject()
@@ -33,94 +25,34 @@ pub async fn upload_avatar(uid: Uuid, form: FormData) -> Result<impl warp::Reply
         let content_type = p.content_type();
         let mime_type = get_mime_type(content_type.unwrap()).unwrap();
         let file_bytes = part_bytes(p).await.unwrap();
-        let db_conn = get_db_conn().await.unwrap();
 
-        db_conn
-            .query_one(
-                r#"
-                INSERT INTO avatars (image, user_id, mime_type)
-                    VALUES($1, $2, $3)
-                    RETURNING
-                    *"#,
-                &[&file_bytes.as_slice(), &uid, &mime_type.to_string()],
-            )
+        return match services
+            .user_service
+            .set_avatar(&uid, mime_type, file_bytes)
             .await
-            .unwrap();
-
-        return Ok(HttpResponse::<String>::new(
-            &format!("Hello {} with {}", uid, mime_type.to_string()),
-            StatusCode::CREATED,
-        ));
+        {
+            Ok(avatar) => Ok(HttpResponse::<Avatar>::with_payload(avatar, StatusCode::OK)),
+            Err(error) => Ok(HttpResponse::new(
+                error.to_string().as_str(),
+                StatusCode::BAD_REQUEST,
+            )),
+        };
     }
 
     Err(warp::reject::reject())
 }
 
-pub async fn replace_avatar(uid: Uuid, form: FormData) -> Result<impl warp::Reply, Rejection> {
-    let db_conn = get_db_conn().await.unwrap();
-
-    if db_conn
-        .query_one("SELECT COUNT(1) FROM avatars WHERE user_id = $1", &[&uid])
-        .await
-        .is_err()
-    {
-        return Ok(HttpResponse::<String>::new(
-            "No avatar found for user",
+pub async fn download_avatar(
+    services: InjectedServices,
+    uid: Uuid,
+) -> Result<impl warp::Reply, Rejection> {
+    match services.user_service.download_avatar(&uid).await {
+        Ok(avatar) => Ok(HttpResponse::<Avatar>::with_payload(avatar, StatusCode::OK)),
+        Err(error) => Ok(HttpResponse::new(
+            error.to_string().as_str(),
             StatusCode::BAD_REQUEST,
-        ));
+        )),
     }
-
-    let parts: Vec<Part> = form.try_collect().await.map_err(|error| {
-        eprintln!("Form Read Error: {}", error);
-        warp::reject::reject()
-    })?;
-
-    if let Some(p) = parts.into_iter().find(|part| part.name() == "image") {
-        let content_type = p.content_type();
-        let mime_type = get_mime_type(content_type.unwrap()).unwrap();
-        let file_bytes = part_bytes(p).await.unwrap();
-
-        db_conn
-            .query_one(
-                r#"
-                UPDATE avatars
-                SET
-                    image = $1,
-                    mime_type = $2
-                WHERE
-                    user_id = $3
-                RETURNING *"#,
-                &[&file_bytes.as_slice(), &mime_type.to_string(), &uid],
-            )
-            .await
-            .unwrap();
-
-        return Ok(HttpResponse::<String>::new(
-            "Avatar updated successfully",
-            StatusCode::OK,
-        ));
-    }
-
-    Err(warp::reject::reject())
-}
-
-pub async fn download_avatar(uid: Uuid) -> Result<impl warp::Reply, Rejection> {
-    let dbconn = get_db_conn().await.unwrap();
-    let results = dbconn
-        .query_one(
-            "SELECT image, mime_type FROM avatars WHERE user_id = $1",
-            &[&uid],
-        )
-        .await
-        .unwrap();
-
-    println!("{:?}", results);
-
-    let image_bytes: &[u8] = results.get(0);
-
-    println!("{:?}", image_bytes);
-
-    Ok(image_bytes.clone().to_owned())
 }
 
 fn get_mime_type(content_type: &str) -> AnyhowResult<AvatarMIMEType> {

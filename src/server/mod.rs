@@ -1,7 +1,9 @@
 use crate::client::Client;
+use crate::database::get_db_conn;
 use crate::hub::Hub;
 use crate::proto::input::Input;
 use crate::proto::parcel::Parcel;
+use crate::service;
 use futures::{StreamExt, TryStreamExt};
 use log::{error, info};
 use std::sync::Arc;
@@ -32,6 +34,8 @@ impl Server {
     pub async fn run(&self) {
         let (input_sender, input_receiver) = mpsc::unbounded_channel::<Parcel<Input>>();
         let hub = self.hub.clone();
+        let db_conn = get_db_conn().await.unwrap();
+        let services = service::Services::init(db_conn);
 
         let chat = warp::path("chat")
             .and(warp::ws())
@@ -52,10 +56,12 @@ impl Server {
             warp::path("signup")
                 .and(warp::post())
                 .and(warp::body::json())
+                .and(service::with_service(services.clone()))
                 .and_then(handler::auth::signup)
                 .or(warp::path("login")
                     .and(warp::get())
                     .and(warp::header::<String>("authorization"))
+                    .and(service::with_service(services.clone()))
                     .and_then(handler::auth::login)),
         );
 
@@ -67,18 +73,21 @@ impl Server {
 
         let upload_avatar = users_avatar
             .and(warp::post())
+            .and(service::with_service(services.clone()))
             .and(warp::path::param())
             .and(warp::multipart::form().max_length(MAX_AVATAR_IMAGE_SIZE))
             .and_then(handler::user::upload_avatar);
 
         let update_avatar = users_avatar
             .and(warp::put())
+            .and(service::with_service(services.clone()))
             .and(warp::path::param())
             .and(warp::multipart::form().max_length(MAX_AVATAR_IMAGE_SIZE))
-            .and_then(handler::user::replace_avatar);
+            .and_then(handler::user::upload_avatar);
 
         let download_avatar = users_avatar.and(
             warp::get()
+                .and(service::with_service(services.clone()))
                 .and(warp::path::param())
                 .and_then(handler::user::download_avatar),
         );
