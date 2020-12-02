@@ -11,7 +11,6 @@ mod model;
 mod proto;
 mod server;
 mod service;
-mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {

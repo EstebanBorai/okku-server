@@ -1,7 +1,10 @@
 use serde::Serialize;
+use warp::http::header;
 use warp::http::StatusCode;
 use warp::hyper::Body;
 use warp::reply::{Reply, Response};
+
+use crate::service;
 
 #[derive(Serialize)]
 pub struct HttpResponse<T>
@@ -36,6 +39,21 @@ where
     }
 }
 
+impl HttpResponse<Vec<u8>> {
+    pub fn send_file(bytes: Vec<u8>, content_type: &str) -> Response {
+        let mut response = Response::new(bytes.into());
+
+        response.headers_mut().insert(
+            header::CONTENT_TYPE,
+            warp::http::HeaderValue::from_str(content_type).unwrap(),
+        );
+
+        *response.status_mut() = StatusCode::OK;
+
+        return response;
+    }
+}
+
 impl<T> Reply for HttpResponse<T>
 where
     T: std::marker::Sized + std::marker::Send + Serialize,
@@ -48,5 +66,23 @@ where
         builder
             .body(Body::from(serde_json::to_string(&self).unwrap()))
             .unwrap()
+    }
+}
+
+impl<T> Into<Response> for HttpResponse<T>
+where
+    T: std::marker::Sized + std::marker::Send + Serialize,
+{
+    fn into(self) -> Response {
+        let as_json = serde_json::to_string(&self).unwrap();
+        let mut response = Response::new(as_json.into());
+
+        *response.status_mut() = StatusCode::from_u16(self.status_code).unwrap();
+        response.headers_mut().insert(
+            header::CONTENT_TYPE,
+            warp::http::HeaderValue::from_static("application/json"),
+        );
+
+        response
     }
 }

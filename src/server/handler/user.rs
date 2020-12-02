@@ -31,11 +31,11 @@ pub async fn upload_avatar(
             .set_avatar(&uid, mime_type, file_bytes)
             .await
         {
-            Ok(avatar) => Ok(HttpResponse::<Avatar>::with_payload(avatar, StatusCode::OK)),
-            Err(error) => Ok(HttpResponse::new(
+            Ok(avatar) => Ok(HttpResponse::<Vec<u8>>::send_file(avatar.image, &avatar.mime_type.to_string())),
+            Err(error) => Ok(HttpResponse::<String>::new(
                 error.to_string().as_str(),
                 StatusCode::BAD_REQUEST,
-            )),
+            ).into()),
         };
     }
 

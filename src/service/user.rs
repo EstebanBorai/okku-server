@@ -94,7 +94,10 @@ impl UserService {
                     mime_type = $2
                 WHERE
                     user_id = $3
-                RETURNING *"#,
+                RETURNING
+                    id,
+                    image,
+                    mime_type"#,
                     &[&file_bytes.as_slice(), &content_type.to_string(), &uid],
                 )
                 .await
