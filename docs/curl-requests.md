@@ -15,7 +15,7 @@ curl -i -H "Content-Type: application/json" -d '{"name": "user", "password": "us
 ## Upload User Avatar
 
 ```bash
-curl -i -X POST -H "Content-Type: multipart/form-data" -F "image=@test.png" http://127.0.0.1:3000/api/v1/users/avatar/7f855b52-4eb5-4e18-a235-faff0378b6e3
+curl -i -X POST -H "Content-Type: multipart/form-data" -F "image=@test.png" -o response_file.png http://127.0.0.1:3000/api/v1/users/avatar/7f855b52-4eb5-4e18-a235-faff0378b6e3
 ```
 
 ## Download User Avatar

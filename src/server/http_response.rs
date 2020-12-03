@@ -4,8 +4,6 @@ use warp::http::StatusCode;
 use warp::hyper::Body;
 use warp::reply::{Reply, Response};
 
-use crate::service;
-
 #[derive(Serialize)]
 pub struct HttpResponse<T>
 where

@@ -1,5 +1,4 @@
-use crate::database::get_db_conn;
-use crate::model::{Avatar, AvatarMIMEType};
+use crate::model::AvatarMIMEType;
 use crate::server::http_response::HttpResponse;
 use crate::service::InjectedServices;
 use anyhow::{Error, Result as AnyhowResult};
@@ -31,11 +30,15 @@ pub async fn upload_avatar(
             .set_avatar(&uid, mime_type, file_bytes)
             .await
         {
-            Ok(avatar) => Ok(HttpResponse::<Vec<u8>>::send_file(avatar.image, &avatar.mime_type.to_string())),
+            Ok(avatar) => Ok(HttpResponse::<Vec<u8>>::send_file(
+                avatar.image,
+                &avatar.mime_type.to_string(),
+            )),
             Err(error) => Ok(HttpResponse::<String>::new(
                 error.to_string().as_str(),
                 StatusCode::BAD_REQUEST,
-            ).into()),
+            )
+            .into()),
         };
     }
 
@@ -47,11 +50,15 @@ pub async fn download_avatar(
     uid: Uuid,
 ) -> Result<impl warp::Reply, Rejection> {
     match services.user_service.download_avatar(&uid).await {
-        Ok(avatar) => Ok(HttpResponse::<Avatar>::with_payload(avatar, StatusCode::OK)),
-        Err(error) => Ok(HttpResponse::new(
+        Ok(avatar) => Ok(HttpResponse::<Vec<u8>>::send_file(
+            avatar.image,
+            &avatar.mime_type.to_string(),
+        )),
+        Err(error) => Ok(HttpResponse::<String>::new(
             error.to_string().as_str(),
             StatusCode::BAD_REQUEST,
-        )),
+        )
+        .into()),
     }
 }
 
