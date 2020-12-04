@@ -133,6 +133,11 @@ impl AuthService {
     /// Verifies a `Token` to have a valid sign and not to
     /// be out dated. If the provided `Token` is valid, returns
     /// the `Claims` for the token
+    ///
+    /// The `dead_code` annotation is being used temporally
+    /// until the verification for the Token is available
+    /// as a filter/middleware
+    #[allow(dead_code)]
     pub fn verify_jwt_token(&self, client_token: &Token) -> Result<Claims> {
         let token_data = decode::<Claims>(
             &client_token.token,

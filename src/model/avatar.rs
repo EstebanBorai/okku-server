@@ -1,4 +1,3 @@
-use anyhow::Error;
 use mobc_postgres::tokio_postgres::types::FromSql;
 use mobc_postgres::tokio_postgres::types::Type;
 use serde::Serialize;

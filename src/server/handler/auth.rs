@@ -16,7 +16,7 @@ pub async fn signup(
         Err(error) => Ok(HttpResponse::new(
             &error.to_string(),
             StatusCode::BAD_REQUEST,
-        )),
+        ).into()),
     }
 }
 
@@ -29,6 +29,6 @@ pub async fn login(
         Err(error) => Ok(HttpResponse::new(
             &error.to_string(),
             StatusCode::BAD_REQUEST,
-        )),
+        ).into()),
     }
 }

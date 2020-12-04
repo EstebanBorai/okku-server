@@ -7,7 +7,7 @@ use warp::reply::{Reply, Response};
 #[derive(Serialize)]
 pub struct HttpResponse<T>
 where
-    T: std::marker::Sized + std::marker::Send + Serialize,
+    T: std::marker::Sized + std::marker::Send + Serialize
 {
     #[serde(skip_serializing_if = "Option::is_none")]
     message: Option<String>,
