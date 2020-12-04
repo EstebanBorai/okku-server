@@ -2,12 +2,13 @@ use serde::Serialize;
 use warp::http::header;
 use warp::http::StatusCode;
 use warp::hyper::Body;
+use warp::reject::Reject;
 use warp::reply::{Reply, Response};
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct HttpResponse<T>
 where
-    T: std::marker::Sized + std::marker::Send + Serialize
+    T: std::marker::Sized + std::marker::Send + Serialize,
 {
     #[serde(skip_serializing_if = "Option::is_none")]
     message: Option<String>,
@@ -84,3 +85,5 @@ where
         response
     }
 }
+
+impl Reject for HttpResponse<String> {}

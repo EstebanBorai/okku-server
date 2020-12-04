@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::sync::Arc;
 use uuid::Uuid;
+use warp::http::StatusCode;
+use warp::hyper::Body;
 
 lazy_static! {
     static ref JWT_SECRET: String = env::var("JWT_SECRET").unwrap();
@@ -29,7 +31,7 @@ pub struct UserRegister {
 }
 
 /// JWT Claims for a User token
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
     pub user_id: Uuid,
 }
@@ -147,5 +149,15 @@ impl AuthService {
         .map_err(Error::from)?;
 
         Ok(token_data.claims)
+    }
+}
+
+impl warp::reply::Reply for Claims {
+    fn into_response(self) -> warp::reply::Response {
+        let builder = warp::http::Response::builder().status(StatusCode::OK);
+
+        builder
+            .body(Body::from(serde_json::to_string(&self).unwrap()))
+            .unwrap()
     }
 }

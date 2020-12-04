@@ -1,6 +1,5 @@
 use crate::database::DbConn;
 use std::sync::Arc;
-use warp::Filter;
 
 mod auth;
 mod user;
@@ -27,13 +26,4 @@ impl Services {
             auth_service: Arc::new(auth_service),
         })
     }
-}
-
-pub fn with_service<S>(
-    service: S,
-) -> impl Filter<Extract = (S,), Error = std::convert::Infallible> + Clone
-where
-    S: Clone + std::marker::Send + std::marker::Sync,
-{
-    warp::any().map(move || service.clone())
 }

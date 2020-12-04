@@ -13,10 +13,7 @@ pub async fn signup(
 
             Ok(HttpResponse::<Token>::with_payload(token, StatusCode::OK))
         }
-        Err(error) => Ok(HttpResponse::new(
-            &error.to_string(),
-            StatusCode::BAD_REQUEST,
-        ).into()),
+        Err(error) => Ok(HttpResponse::new(&error.to_string(), StatusCode::BAD_REQUEST).into()),
     }
 }
 
@@ -26,9 +23,6 @@ pub async fn login(
 ) -> Result<impl warp::Reply, std::convert::Infallible> {
     match services.auth_service.login(&auth_header_value).await {
         Ok(token) => Ok(HttpResponse::<Token>::with_payload(token, StatusCode::OK)),
-        Err(error) => Ok(HttpResponse::new(
-            &error.to_string(),
-            StatusCode::BAD_REQUEST,
-        ).into()),
+        Err(error) => Ok(HttpResponse::new(&error.to_string(), StatusCode::BAD_REQUEST).into()),
     }
 }

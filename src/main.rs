@@ -7,6 +7,7 @@ use std::env;
 mod client;
 mod database;
 mod hub;
+mod middleware;
 mod model;
 mod proto;
 mod server;

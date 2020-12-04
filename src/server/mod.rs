@@ -1,6 +1,7 @@
 use crate::client::Client;
 use crate::database::get_db_conn;
 use crate::hub::Hub;
+use crate::middleware::{with_authorization, with_service};
 use crate::proto::input::Input;
 use crate::proto::parcel::Parcel;
 use crate::service;
@@ -13,7 +14,7 @@ use warp::ws::WebSocket;
 use warp::Filter;
 
 mod handler;
-mod http_response;
+pub mod http_response;
 
 /// Max size for Avatar file. 3 MB in bytes
 const MAX_AVATAR_IMAGE_SIZE: u64 = 3_000_000;
@@ -56,12 +57,12 @@ impl Server {
             warp::path("signup")
                 .and(warp::post())
                 .and(warp::body::json())
-                .and(service::with_service(services.clone()))
+                .and(with_service(services.clone()))
                 .and_then(handler::auth::signup)
                 .or(warp::path("login")
                     .and(warp::get())
                     .and(warp::header::<String>("authorization"))
-                    .and(service::with_service(services.clone()))
+                    .and(with_service(services.clone()))
                     .and_then(handler::auth::login)),
         );
 
@@ -73,21 +74,24 @@ impl Server {
 
         let upload_avatar = users_avatar
             .and(warp::post())
-            .and(service::with_service(services.clone()))
+            .and(with_authorization())
+            .and(with_service(services.clone()))
             .and(warp::path::param())
             .and(warp::multipart::form().max_length(MAX_AVATAR_IMAGE_SIZE))
             .and_then(handler::user::upload_avatar);
 
         let update_avatar = users_avatar
             .and(warp::put())
-            .and(service::with_service(services.clone()))
+            .and(with_authorization())
+            .and(with_service(services.clone()))
             .and(warp::path::param())
             .and(warp::multipart::form().max_length(MAX_AVATAR_IMAGE_SIZE))
             .and_then(handler::user::upload_avatar);
 
         let download_avatar = users_avatar.and(
             warp::get()
-                .and(service::with_service(services.clone()))
+                .and(with_authorization())
+                .and(with_service(services.clone()))
                 .and(warp::path::param())
                 .and_then(handler::user::download_avatar),
         );
