@@ -64,7 +64,7 @@ impl UserService {
             Secret {
                 id: rows.get(2),
                 hash: rows.get(3),
-                user_id: rows.get(4),
+                user_id: rows.get(0),
             },
         ))
     }
@@ -77,7 +77,7 @@ impl UserService {
     ) -> Result<Avatar> {
         let has_avatar = self
             .db_conn
-            .query_one("SELECT COUNT(1) FROM avatars WHERE user_id = $1", &[&uid])
+            .query_one("SELECT id FROM avatars WHERE user_id = $1", &[&uid])
             .await
             .is_ok();
 
@@ -116,7 +116,7 @@ impl UserService {
                 r#"
                 INSERT INTO avatars (image, user_id, mime_type)
                 VALUES($1, $2, $3)
-                RETURNING *"#,
+                RETURNING id, image, mime_type"#,
                 &[&file_bytes.as_slice(), &uid, &content_type.to_string()],
             )
             .await
@@ -133,7 +133,10 @@ impl UserService {
         let rows: Row = self
             .db_conn
             .query_one(
-                "SELECT id, image, mime_type FROM avatars WHERE user_id = $1",
+                r#"
+                SELECT id, image, mime_type
+                FROM avatars
+                WHERE user_id = $1"#,
                 &[&user_id],
             )
             .await

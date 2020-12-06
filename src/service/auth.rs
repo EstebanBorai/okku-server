@@ -10,6 +10,7 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use warp::http::StatusCode;
 use warp::hyper::Body;
@@ -34,6 +35,7 @@ pub struct UserRegister {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
     pub user_id: Uuid,
+    pub exp: u128,
 }
 
 /// Token payload sent to the client when authentication
@@ -56,7 +58,7 @@ impl AuthService {
         let password = user_register.password.clone();
 
         if self.user_service.get_user_by_name(&username).await.is_ok() {
-            return Err(Error::msg(format!("Username {} is taken", &username)));
+            return Err(Error::msg(format!("Username \"{}\" is taken", &username)));
         }
 
         let user = self
@@ -99,7 +101,7 @@ impl AuthService {
         let rows: Row = self
             .db_conn
             .query_one(
-                "INSERT INTO secrets(hash, user_id) VALUES ($1, $2)",
+                "INSERT INTO secrets(hash, user_id) VALUES ($1, $2) RETURNING id, hash, user_id",
                 &[&hash, &user.id],
             )
             .await
@@ -120,7 +122,11 @@ impl AuthService {
 
     /// Signs a JWT token with the provided claims (`Claims`)
     pub fn sign_jwt_token(&self, user: &User) -> Result<Token> {
-        let claims = Claims { user_id: user.id };
+        let one_day_ms = Duration::from_secs(60 * 60 * 24).as_millis();
+        let claims = Claims {
+            user_id: user.id,
+            exp: AuthService::timestamp_now() + one_day_ms,
+        };
 
         let token = encode(
             &Header::default(),
@@ -132,23 +138,10 @@ impl AuthService {
         Ok(Token { token })
     }
 
-    /// Verifies a `Token` to have a valid sign and not to
-    /// be out dated. If the provided `Token` is valid, returns
-    /// the `Claims` for the token
-    ///
-    /// The `dead_code` annotation is being used temporally
-    /// until the verification for the Token is available
-    /// as a filter/middleware
-    #[allow(dead_code)]
-    pub fn verify_jwt_token(&self, client_token: &Token) -> Result<Claims> {
-        let token_data = decode::<Claims>(
-            &client_token.token,
-            &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
-            &Validation::default(),
-        )
-        .map_err(Error::from)?;
-
-        Ok(token_data.claims)
+    pub fn timestamp_now() -> u128 {
+        SystemTime::now().duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_millis()
     }
 }
 

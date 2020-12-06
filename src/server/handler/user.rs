@@ -11,7 +11,7 @@ use warp::http::StatusCode;
 use warp::reject::Rejection;
 
 pub async fn upload_avatar(
-    claims: Claims,
+    _: Claims,
     services: InjectedServices,
     uid: Uuid,
     form: FormData,
@@ -47,7 +47,7 @@ pub async fn upload_avatar(
 }
 
 pub async fn download_avatar(
-    claims: Claims,
+    _: Claims,
     services: InjectedServices,
     uid: Uuid,
 ) -> Result<impl warp::Reply, Rejection> {

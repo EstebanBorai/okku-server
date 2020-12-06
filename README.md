@@ -41,6 +41,16 @@ A [warp](https://github.com/seanmonstar/warp) server will listen on `ws://127.0.
 You must complete all steps on [Development](#development) section in order
 to follow the steps on this section.
 
+## API Reference
+
+Description | URI | Method | HTTP Headers | Req. Body | Res. Body
+--- | --- | --- | --- | --- | ---
+Authenticate an existent user and retrieve a token | `auth/login` | GET | `Authorization: Basic <Basic Auth>` | N/A | `{"status_code": <status code>, "payload": { "token": <JWT Token> }}`
+Create a new user and retrieve a token | `auth/signup` | POST | N/A | `{"name": "username", "password": "password"}` | `{"status_code": <status code>, "payload": { "token": <JWT Token> }}`
+Download an avatar | `api/v1/users/avatar/{user id}` | GET | `Authorization: Bearer <Token>` | N/A | `<File>`
+Upload an avatar | `api/v1/users/avatar/{user id}` | POST | `Authorization: Bearer <Token>` | `FormData: image=<File>` | `<File>`
+Replace an existent avatar | `api/v1/users/avatar/{user id}` | PUT | `Authorization: Bearer <Token>` | `FormData: image=<File>` | `<File>`
+
 ### Sending a message
 
 With the server running, on `ws://127.0.0.1:8080/`, a WebSocket connection
