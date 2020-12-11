@@ -1,9 +1,12 @@
 use anyhow::{Error, Result};
 use futures::stream::SplitStream;
 use futures::{future, Stream, StreamExt, TryStream, TryStreamExt};
+use std::sync::Arc;
+use tokio::sync::mpsc::{self, UnboundedSender};
 use uuid::Uuid;
 use warp::filters::ws::WebSocket;
 
+use crate::hub::Hub;
 use crate::proto::input::Input;
 use crate::proto::output::Output;
 use crate::proto::parcel::Parcel;
@@ -14,8 +17,10 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new() -> Self {
-        Self { id: Uuid::new_v4() }
+    /// Creates a new chat `Client` with the provided UUID.
+    /// The provided UUID must belong to an existent `User`
+    pub fn new(id: Uuid) -> Self {
+        Self { id }
     }
 
     /// Reads the incoming `Stream` and attempts to
@@ -61,4 +66,47 @@ impl Client {
             })
             .map_err(|err| Error::msg(err.to_string()))
     }
+
+    /// Subscribes a `Client` to the `Hub` in order to handle I/O
+    /// operations on the `Client`
+    pub async fn subscribe_client(
+      hub: Arc<Hub>,
+      web_socket: WebSocket,
+      input_sender: UnboundedSender<Parcel<Input>>,
+      user_id: Uuid,
+  ) {
+      let output_receiver = hub.subscribe();
+      let (ws_sink, ws_stream) = web_socket.split();
+      let client = Client::new(user_id);
+
+      info!("Client (User ID: {}) connected", client.id);
+
+      let reading = client
+          .read_input(ws_stream)
+          .try_for_each(|input_parcel| async {
+              input_sender.send(input_parcel).unwrap();
+              Ok(())
+          });
+
+      let (tx, rx) = mpsc::unbounded_channel();
+
+      tokio::spawn(rx.forward(ws_sink));
+
+      let writing = client
+          .write_output(output_receiver.into_stream())
+          .try_for_each(|message| async {
+              tx.send(Ok(message)).unwrap();
+              Ok(())
+          });
+
+      if let Err(err) = tokio::select! {
+        result = reading => result,
+        result = writing => result,
+      } {
+          error!("Client (User ID: {}) had an error {}", client.id, err);
+      }
+
+      hub.on_disconnect(client.id).await;
+      info!("Client (User ID: {}) disconnected", client.id);
+  }
 }

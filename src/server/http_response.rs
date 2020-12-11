@@ -17,6 +17,8 @@ where
     payload: Option<T>,
 }
 
+impl Reject for HttpResponse<String> {}
+
 impl<T> HttpResponse<T>
 where
     T: std::marker::Sized + std::marker::Send + Serialize,
@@ -85,5 +87,3 @@ where
         response
     }
 }
-
-impl Reject for HttpResponse<String> {}

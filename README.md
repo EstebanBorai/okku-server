@@ -45,6 +45,7 @@ to follow the steps on this section.
 
 Description | URI | Method | HTTP Headers | Req. Body | Res. Body
 --- | --- | --- | --- | --- | ---
+Connect to WebSocket to receive and send messages | `chat?token=<JWT Token>` | This endpoint makes use of the `WebSocket` (ws://) protocol | N/A | N/A | N/A
 Authenticate an existent user and retrieve a token | `auth/login` | GET | `Authorization: Basic <Basic Auth>` | N/A | `{"status_code": <status code>, "payload": { "token": <JWT Token> }}`
 Create a new user and retrieve a token | `auth/signup` | POST | N/A | `{"name": "username", "password": "password"}` | `{"status_code": <status code>, "payload": { "token": <JWT Token> }}`
 Download an avatar | `api/v1/users/avatar/{user id}` | GET | `Authorization: Bearer <Token>` | N/A | `<File>`
@@ -61,7 +62,7 @@ and write the following to the console.
 
 ```javascript
 // create a WebSocket connection using the WebSocket object
-const msend = new WebSocket('ws://127.0.0.1:8080');
+const msend = new WebSocket('ws://127.0.0.1:8080?token=<JWT Token>');
 
 // send a message
 msend.send(JSON.stringify({

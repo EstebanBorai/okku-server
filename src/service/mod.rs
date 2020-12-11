@@ -1,9 +1,11 @@
 use crate::database::DbConn;
 use std::sync::Arc;
 
+mod chat;
 mod auth;
 mod user;
 
+pub use chat::*;
 pub use auth::*;
 pub use user::*;
 

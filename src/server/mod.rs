@@ -1,17 +1,16 @@
-use crate::client::Client;
+use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::{self, UnboundedSender};
+use tokio::time::Duration;
+use warp::Filter;
+
+use crate::service::Client;
 use crate::database::get_db_conn;
 use crate::hub::Hub;
 use crate::middleware::{with_authorization, with_service};
 use crate::proto::input::Input;
 use crate::proto::parcel::Parcel;
-use crate::service;
-use futures::{StreamExt, TryStreamExt};
-use log::{error, info};
-use std::sync::Arc;
-use tokio::sync::mpsc::{self, UnboundedSender};
-use tokio::time::Duration;
-use warp::ws::WebSocket;
-use warp::Filter;
+use crate::service::{AuthService, Services};
 
 mod handler;
 pub mod http_response;
@@ -19,9 +18,17 @@ pub mod http_response;
 /// Max size for Avatar file. 3 MB in bytes
 const MAX_AVATAR_IMAGE_SIZE: u64 = 3_000_000;
 
+/// MSend server implementation
 pub struct Server {
     port: u16,
     hub: Arc<Hub>,
+}
+
+/// Query parameters expected by the `/chat` WebSocket
+/// endpoint
+#[derive(Deserialize, Serialize)]
+struct WebSocketQuery {
+    pub token: String,
 }
 
 impl Server {
@@ -32,22 +39,30 @@ impl Server {
         }
     }
 
+    /// Initilizes application services, database connection and routes
+    /// and serves the MSend server on the specified address
     pub async fn run(&self) {
         let (input_sender, input_receiver) = mpsc::unbounded_channel::<Parcel<Input>>();
         let hub = self.hub.clone();
         let db_conn = get_db_conn().await.unwrap();
-        let services = service::Services::init(db_conn);
+        let services = Services::init(db_conn);
 
         let chat = warp::path("chat")
             .and(warp::ws())
+            .and(warp::query())
             .and(warp::any().map(move || input_sender.clone()))
             .and(warp::any().map(move || hub.clone()))
             .map(
                 move |ws: warp::ws::Ws,
+                      query_params: WebSocketQuery,
                       input_sender: UnboundedSender<Parcel<Input>>,
                       hub: Arc<Hub>| {
                     ws.on_upgrade(move |web_socket| async move {
-                        tokio::spawn(Server::process_client(hub, web_socket, input_sender));
+                        if let Ok(claims) = AuthService::verify_jwt_token(&query_params.token) {
+                            tokio::spawn(Client::subscribe_client(hub, web_socket, input_sender, claims.user_id));
+                        } else {
+                            warp::reject::reject();
+                        }
                     })
                 },
             );
@@ -118,45 +133,5 @@ impl Server {
           _ = serving => {},
           _ = running_hub => {},
         }
-    }
-
-    async fn process_client(
-        hub: Arc<Hub>,
-        web_socket: WebSocket,
-        input_sender: UnboundedSender<Parcel<Input>>,
-    ) {
-        let output_receiver = hub.subscribe();
-        let (ws_sink, ws_stream) = web_socket.split();
-        let client = Client::new();
-
-        info!("Client {} connected", client.id);
-
-        let reading = client
-            .read_input(ws_stream)
-            .try_for_each(|input_parcel| async {
-                input_sender.send(input_parcel).unwrap();
-                Ok(())
-            });
-
-        let (tx, rx) = mpsc::unbounded_channel();
-
-        tokio::spawn(rx.forward(ws_sink));
-
-        let writing = client
-            .write_output(output_receiver.into_stream())
-            .try_for_each(|message| async {
-                tx.send(Ok(message)).unwrap();
-                Ok(())
-            });
-
-        if let Err(err) = tokio::select! {
-          result = reading => result,
-          result = writing => result,
-        } {
-            error!("Client connection error: {}", err);
-        }
-
-        hub.on_disconnect(client.id).await;
-        info!("Client {} disconnected", client.id);
     }
 }
