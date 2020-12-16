@@ -1,12 +1,12 @@
 use crate::database::DbConn;
 use std::sync::Arc;
 
-mod chat;
 mod auth;
+mod chat;
 mod user;
 
-pub use chat::*;
 pub use auth::*;
+pub use chat::*;
 pub use user::*;
 
 #[derive(Clone)]

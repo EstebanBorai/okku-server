@@ -1,15 +1,16 @@
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tokio::sync::mpsc::{self, UnboundedSender};
 use tokio::time::Duration;
+use warp::http;
 use warp::Filter;
 
-use crate::service::Client;
 use crate::database::get_db_conn;
 use crate::hub::Hub;
 use crate::middleware::{with_authorization, with_service};
 use crate::proto::input::Input;
 use crate::proto::parcel::Parcel;
+use crate::service::Client;
 use crate::service::{AuthService, Services};
 
 mod handler;
@@ -46,6 +47,19 @@ impl Server {
         let hub = self.hub.clone();
         let db_conn = get_db_conn().await.unwrap();
         let services = Services::init(db_conn);
+        let cors = warp::cors()
+            .allow_any_origin()
+            .allow_credentials(true)
+            .allow_headers(vec![
+                http::header::AUTHORIZATION,
+                http::header::CONTENT_TYPE,
+            ])
+            .allow_methods(&[
+                http::Method::GET,
+                http::Method::OPTIONS,
+                http::Method::POST,
+                http::Method::PUT,
+            ]);
 
         let chat = warp::path("chat")
             .and(warp::ws())
@@ -59,7 +73,12 @@ impl Server {
                       hub: Arc<Hub>| {
                     ws.on_upgrade(move |web_socket| async move {
                         if let Ok(claims) = AuthService::verify_jwt_token(&query_params.token) {
-                            tokio::spawn(Client::subscribe_client(hub, web_socket, input_sender, claims.user_id));
+                            tokio::spawn(Client::subscribe_client(
+                                hub,
+                                web_socket,
+                                input_sender,
+                                claims.user_id,
+                            ));
                         } else {
                             warp::reject::reject();
                         }
@@ -111,12 +130,15 @@ impl Server {
                 .and_then(handler::user::download_avatar),
         );
 
-        let routes = chat
-            .or(auth)
-            .or(health)
-            .or(upload_avatar)
-            .or(download_avatar)
-            .or(update_avatar);
+        let routes = warp::any()
+            .and(
+                chat.or(auth)
+                    .or(health)
+                    .or(upload_avatar)
+                    .or(download_avatar)
+                    .or(update_avatar),
+            )
+            .with(cors);
 
         let shutdown = async {
             tokio::signal::ctrl_c()

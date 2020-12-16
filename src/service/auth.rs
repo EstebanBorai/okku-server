@@ -145,13 +145,15 @@ impl AuthService {
             token,
             &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
             &Validation::default(),
-        ).map_err(|e| Error::from(e))?;
+        )
+        .map_err(|e| Error::from(e))?;
 
         Ok(decode_result.claims)
     }
 
     pub fn timestamp_now() -> u128 {
-        SystemTime::now().duration_since(UNIX_EPOCH)
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
             .expect("Time went backwards")
             .as_millis()
     }

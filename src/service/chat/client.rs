@@ -70,43 +70,44 @@ impl Client {
     /// Subscribes a `Client` to the `Hub` in order to handle I/O
     /// operations on the `Client`
     pub async fn subscribe_client(
-      hub: Arc<Hub>,
-      web_socket: WebSocket,
-      input_sender: UnboundedSender<Parcel<Input>>,
-      user_id: Uuid,
-  ) {
-      let output_receiver = hub.subscribe();
-      let (ws_sink, ws_stream) = web_socket.split();
-      let client = Client::new(user_id);
+        hub: Arc<Hub>,
+        web_socket: WebSocket,
+        input_sender: UnboundedSender<Parcel<Input>>,
+        user_id: Uuid,
+    ) {
+        let output_receiver = hub.subscribe();
+        let (ws_sink, ws_stream) = web_socket.split();
+        let client = Client::new(user_id);
 
-      info!("Client (User ID: {}) connected", client.id);
+        info!("Client (User ID: {}) connected", client.id);
 
-      let reading = client
-          .read_input(ws_stream)
-          .try_for_each(|input_parcel| async {
-              input_sender.send(input_parcel).unwrap();
-              Ok(())
-          });
+        let reading = client
+            .read_input(ws_stream)
+            .try_for_each(|input_parcel| async {
+                info!("Received message from {}. Parcel: {:?}", client.id.to_string(), input_parcel);
+                input_sender.send(input_parcel).unwrap();
+                Ok(())
+            });
 
-      let (tx, rx) = mpsc::unbounded_channel();
+        let (tx, rx) = mpsc::unbounded_channel();
 
-      tokio::spawn(rx.forward(ws_sink));
+        tokio::spawn(rx.forward(ws_sink));
 
-      let writing = client
-          .write_output(output_receiver.into_stream())
-          .try_for_each(|message| async {
-              tx.send(Ok(message)).unwrap();
-              Ok(())
-          });
+        let writing = client
+            .write_output(output_receiver.into_stream())
+            .try_for_each(|message| async {
+                tx.send(Ok(message)).unwrap();
+                Ok(())
+            });
 
-      if let Err(err) = tokio::select! {
-        result = reading => result,
-        result = writing => result,
-      } {
-          error!("Client (User ID: {}) had an error {}", client.id, err);
-      }
+        if let Err(err) = tokio::select! {
+          result = reading => result,
+          result = writing => result,
+        } {
+            error!("Client (User ID: {}) had an error {}", client.id, err);
+        }
 
-      hub.on_disconnect(client.id).await;
-      info!("Client (User ID: {}) disconnected", client.id);
-  }
+        hub.on_disconnect(client.id).await;
+        info!("Client (User ID: {}) disconnected", client.id);
+    }
 }

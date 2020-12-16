@@ -24,24 +24,20 @@ pub fn with_authorization() -> impl Filter<Extract = (Claims,), Error = Rejectio
         let token: Vec<&str> = authorizaton_header.split(" ").into_iter().collect();
 
         if token.get(0).is_none() || token.len() != 2 {
-            return Err(warp::reject::custom(
-                HttpResponse::<String>::new(
-                    "Invalid authorization header provided",
-                    StatusCode::BAD_REQUEST,
-                ),
-            ));
+            return Err(warp::reject::custom(HttpResponse::<String>::new(
+                "Invalid authorization header provided",
+                StatusCode::BAD_REQUEST,
+            )));
         }
 
         if token.get(0).is_some() {
             let schema = *token.get(0).unwrap();
 
             if schema.to_lowercase() != "bearer" {
-                return Err(warp::reject::custom(
-                    HttpResponse::<String>::new(
-                        "Invalid token schema, expected Bearer",
-                        StatusCode::BAD_REQUEST,
-                    ),
-                ));
+                return Err(warp::reject::custom(HttpResponse::<String>::new(
+                    "Invalid token schema, expected Bearer",
+                    StatusCode::BAD_REQUEST,
+                )));
             }
         }
 
