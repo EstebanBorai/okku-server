@@ -1,7 +1,8 @@
+use warp::http::StatusCode;
+
+use crate::error::MSendError;
 use crate::server::http_response::HttpResponse;
 use crate::service::{InjectedServices, Token, UserRegister};
-use anyhow::Result;
-use warp::http::StatusCode;
 
 pub async fn signup(
     user_register: UserRegister,
@@ -13,7 +14,7 @@ pub async fn signup(
 
             Ok(HttpResponse::<Token>::with_payload(token, StatusCode::OK))
         }
-        Err(error) => Ok(HttpResponse::new(&error.to_string(), StatusCode::BAD_REQUEST).into()),
+        Err(e) => Ok(e.into_http()),
     }
 }
 
@@ -23,6 +24,6 @@ pub async fn login(
 ) -> Result<impl warp::Reply, std::convert::Infallible> {
     match services.auth_service.login(&auth_header_value).await {
         Ok(token) => Ok(HttpResponse::<Token>::with_payload(token, StatusCode::OK)),
-        Err(error) => Ok(HttpResponse::new(&error.to_string(), StatusCode::BAD_REQUEST).into()),
+        Err(e) => Ok(e.into_http()),
     }
 }

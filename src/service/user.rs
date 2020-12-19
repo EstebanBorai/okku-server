@@ -1,8 +1,9 @@
-use crate::database::{DbConn, Row};
-use crate::model::{Avatar, AvatarMIMEType, Secret, User};
-use anyhow::{Error, Result};
 use std::sync::Arc;
 use uuid::Uuid;
+
+use crate::database::{DbConn, Row};
+use crate::error::AppError;
+use crate::model::{Avatar, AvatarMIMEType, Secret, User};
 
 #[derive(Clone)]
 pub struct UserService {
@@ -15,7 +16,7 @@ impl UserService {
     }
 
     /// Get `User` with the provided `name`
-    pub async fn get_user_by_name(&self, name: &str) -> Result<User> {
+    pub async fn get_user_by_name(&self, name: &str) -> Result<User, AppError> {
         let result = self
             .db_conn
             .query_one(
@@ -23,23 +24,23 @@ impl UserService {
                 &[&name],
             )
             .await
-            .map_err(Error::from)?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(User::new(result.get(0), result.get(1)))
     }
 
     /// Creates a new `User`
-    pub async fn create_user(&self, name: &str) -> Result<User> {
+    pub async fn create_user(&self, name: &str) -> Result<User, AppError> {
         let rows: Row = self
             .db_conn
             .query_one("INSERT INTO users(name) VALUES ($1) RETURNING *", &[&name])
             .await
-            .map_err(Error::from)?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(User::new(rows.get(0), rows.get(1)))
     }
 
-    pub async fn get_user_with_secret(&self, name: &str) -> Result<(User, Secret)> {
+    pub async fn get_user_and_secret(&self, name: &str) -> Result<(User, Secret), AppError> {
         let rows: Row = self
             .db_conn
             .query_one(
@@ -57,7 +58,7 @@ impl UserService {
                 &[&name],
             )
             .await
-            .map_err(Error::from)?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok((
             User::new(rows.get(0), rows.get(1)),
@@ -74,7 +75,7 @@ impl UserService {
         uid: &Uuid,
         content_type: AvatarMIMEType,
         file_bytes: Vec<u8>,
-    ) -> Result<Avatar> {
+    ) -> Result<Avatar, AppError> {
         let has_avatar = self
             .db_conn
             .query_one("SELECT id FROM avatars WHERE user_id = $1", &[&uid])
@@ -101,7 +102,7 @@ impl UserService {
                     &[&file_bytes.as_slice(), &content_type.to_string(), &uid],
                 )
                 .await
-                .map_err(Error::from)?;
+                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
             return Ok(Avatar {
                 id: rows.get(0),
@@ -120,7 +121,7 @@ impl UserService {
                 &[&file_bytes.as_slice(), &uid, &content_type.to_string()],
             )
             .await
-            .map_err(Error::from)?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(Avatar {
             id: rows.get(0),
@@ -129,7 +130,7 @@ impl UserService {
         })
     }
 
-    pub async fn download_avatar(&self, user_id: &Uuid) -> Result<Avatar> {
+    pub async fn download_avatar(&self, user_id: &Uuid) -> Result<Avatar, AppError> {
         let rows: Row = self
             .db_conn
             .query_one(
@@ -140,7 +141,7 @@ impl UserService {
                 &[&user_id],
             )
             .await
-            .map_err(Error::from)?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(Avatar {
             id: rows.get(0),

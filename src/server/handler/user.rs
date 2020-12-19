@@ -1,14 +1,12 @@
-use crate::model::AvatarMIMEType;
-use crate::server::http_response::HttpResponse;
-use crate::service::{Claims, InjectedServices};
-use anyhow::{Error, Result as AnyhowResult};
-use bytes::BufMut;
 use futures::TryStreamExt;
 use std::string::ToString;
 use uuid::Uuid;
 use warp::filters::multipart::{FormData, Part};
-use warp::http::StatusCode;
 use warp::reject::Rejection;
+
+use crate::error::MSendError;
+use crate::server::http_response::HttpResponse;
+use crate::service::{Claims, InjectedServices};
 
 pub async fn upload_avatar(
     _: Claims,
@@ -23,8 +21,11 @@ pub async fn upload_avatar(
 
     if let Some(p) = parts.into_iter().find(|part| part.name() == "image") {
         let content_type = p.content_type();
-        let mime_type = get_mime_type(content_type.unwrap()).unwrap();
-        let file_bytes = part_bytes(p).await.unwrap();
+        let mime_type = services
+            .image_service
+            .get_mime_type(content_type.unwrap())
+            .unwrap();
+        let file_bytes = services.image_service.part_bytes(p).await.unwrap();
 
         return match services
             .user_service
@@ -35,11 +36,7 @@ pub async fn upload_avatar(
                 avatar.image,
                 &avatar.mime_type.to_string(),
             )),
-            Err(error) => Ok(HttpResponse::<String>::new(
-                error.to_string().as_str(),
-                StatusCode::BAD_REQUEST,
-            )
-            .into()),
+            Err(e) => Ok(e.into_response()),
         };
     }
 
@@ -56,37 +53,6 @@ pub async fn download_avatar(
             avatar.image,
             &avatar.mime_type.to_string(),
         )),
-        Err(error) => Ok(HttpResponse::<String>::new(
-            error.to_string().as_str(),
-            StatusCode::BAD_REQUEST,
-        )
-        .into()),
-    }
-}
-
-fn get_mime_type(content_type: &str) -> AnyhowResult<AvatarMIMEType> {
-    match content_type {
-        "image/png" => Ok(AvatarMIMEType::Png),
-        "image/jpeg" => Ok(AvatarMIMEType::Jpeg),
-        _ => Err(Error::msg(format!(
-            "Unsupported Content-Type for \"image\": {}",
-            content_type
-        ))),
-    }
-}
-
-async fn part_bytes(part: Part) -> AnyhowResult<Vec<u8>> {
-    let stream = part.stream();
-
-    match stream
-        .try_fold(Vec::new(), |mut vec, data| {
-            vec.put(data);
-            async move { Ok(vec) }
-        })
-        .await
-        .map_err(|error| Err(Error::msg(error.to_string())))
-    {
-        Ok(bytes) => Ok(bytes),
-        Err(error) => Err(error.unwrap()),
+        Err(e) => Ok(e.into_response()),
     }
 }

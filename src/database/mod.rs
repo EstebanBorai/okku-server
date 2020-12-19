@@ -1,4 +1,3 @@
-use anyhow::{Context, Result};
 use lazy_static::lazy_static;
 use mobc::{Connection, Pool};
 use mobc_postgres::{tokio_postgres, PgConnectionManager};
@@ -8,6 +7,8 @@ use std::fs::read_to_string;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio_postgres::{Config, NoTls};
+
+use crate::error::{AppError, Result};
 
 const DB_POOL_MAX_OPEN: u64 = 32;
 const DB_POOL_MAX_IDLE: u64 = 8;
@@ -19,7 +20,7 @@ pub type DbPool = Pool<PgConnectionManager<NoTls>>;
 pub type Row = tokio_postgres::Row;
 
 lazy_static! {
-    static ref DB_POOL: DbPool = create_pool().context("Unable to create DbPool.").unwrap();
+    static ref DB_POOL: DbPool = create_pool().unwrap();
 }
 
 /// Builds a Postgres connection pool and defines configurations such
@@ -41,7 +42,8 @@ pub fn create_pool() -> Result<DbPool> {
         username = db_username,
         password = db_password,
         database = database
-    ))?;
+    ))
+    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
     let manager = PgConnectionManager::new(config, NoTls);
 
@@ -59,7 +61,10 @@ pub fn create_pool() -> Result<DbPool> {
 ///
 /// [tokio_postgres](https://docs.rs/tokio-postgres/0.5.5/tokio_postgres/index.html)
 pub async fn get_db_conn() -> Result<DbConn> {
-    Ok(DB_POOL.get().await?)
+    Ok(DB_POOL
+        .get()
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?)
 }
 
 /// Initializes the database.
@@ -69,12 +74,18 @@ pub async fn get_db_conn() -> Result<DbConn> {
 /// Then gets a connection from the Database Connection Pool
 /// and executes the `init.sql` query.
 pub async fn init_db() -> Result<()> {
-    let init_query = read_to_string(canonicalize("./src/database/init.sql")?)?;
+    let init_query = read_to_string(
+        canonicalize("./src/database/init.sql")
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?,
+    )
+    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
     let conn = get_db_conn()
         .await
-        .context("Unable to get a connection from the pool")?;
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-    conn.batch_execute(init_query.as_str()).await?;
+    conn.batch_execute(init_query.as_str())
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
     Ok(())
 }

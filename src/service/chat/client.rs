@@ -1,4 +1,3 @@
-use anyhow::{Error, Result};
 use futures::stream::SplitStream;
 use futures::{future, Stream, StreamExt, TryStream, TryStreamExt};
 use std::sync::Arc;
@@ -6,6 +5,7 @@ use tokio::sync::mpsc::{self, UnboundedSender};
 use uuid::Uuid;
 use warp::filters::ws::WebSocket;
 
+use crate::error::AppError;
 use crate::hub::Hub;
 use crate::proto::input::Input;
 use crate::proto::output::Output;
@@ -28,7 +28,7 @@ impl Client {
     pub fn read_input(
         &self,
         stream: SplitStream<WebSocket>,
-    ) -> impl Stream<Item = Result<Parcel<Input>>> {
+    ) -> impl Stream<Item = Result<Parcel<Input>, AppError>> {
         let client_id = self.id;
 
         stream
@@ -40,7 +40,7 @@ impl Client {
                 })
             })
             .map(move |message| match message {
-                Err(err) => Err(Error::new(err)),
+                Err(err) => Err(AppError::ReadMessageError(err.to_string())),
                 Ok(message) => {
                     let input = serde_json::from_str(message.to_str().unwrap()).unwrap();
                     info!("Received: {:?}", input);
@@ -50,7 +50,7 @@ impl Client {
             })
     }
 
-    pub fn write_output<S, E>(&self, stream: S) -> impl Stream<Item = Result<warp::ws::Message>>
+    pub fn write_output<S, E>(&self, stream: S) -> impl Stream<Item = Result<warp::ws::Message, AppError>>
     where
         S: TryStream<Ok = Parcel<Output>, Error = E> + Stream<Item = Result<Parcel<Output>, E>>,
         E: std::error::Error,
@@ -64,7 +64,7 @@ impl Client {
 
                 warp::ws::Message::text(data)
             })
-            .map_err(|err| Error::msg(err.to_string()))
+            .map_err(|err| AppError::WriteMessageError(err.to_string()))
     }
 
     /// Subscribes a `Client` to the `Hub` in order to handle I/O

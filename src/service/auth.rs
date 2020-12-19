@@ -1,7 +1,3 @@
-use crate::database::{DbConn, Row};
-use crate::model::{Secret, User};
-use crate::service::UserService;
-use anyhow::{Error, Result};
 use argon2::{self, Config};
 use http_auth_basic::Credentials;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
@@ -14,6 +10,11 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use warp::http::StatusCode;
 use warp::hyper::Body;
+
+use crate::database::{DbConn, Row};
+use crate::error::AppError;
+use crate::model::{Secret, User};
+use crate::service::UserService;
 
 lazy_static! {
     static ref JWT_SECRET: String = env::var("JWT_SECRET").unwrap();
@@ -53,19 +54,19 @@ impl AuthService {
         }
     }
 
-    pub async fn signup(&self, user_register: UserRegister) -> Result<User> {
+    pub async fn signup(&self, user_register: UserRegister) -> Result<User, AppError> {
         let username = user_register.name.clone();
         let password = user_register.password.clone();
 
         if self.user_service.get_user_by_name(&username).await.is_ok() {
-            return Err(Error::msg(format!("Username \"{}\" is taken", &username)));
+            return Err(AppError::UsernameTaken(username));
         }
 
         let user = self
             .user_service
             .create_user(&username)
             .await
-            .map_err(Error::from)?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         let password_hash = &self.make_hash(password.as_bytes())?;
 
@@ -74,30 +75,31 @@ impl AuthService {
         Ok(user)
     }
 
-    pub async fn login(&self, authorization_header: &str) -> Result<Token> {
+    pub async fn login(&self, authorization_header: &str) -> Result<Token, AppError> {
         let credentials = Credentials::from_header(authorization_header.to_string())
-            .map_err(|err| Error::msg(err.to_string()))?;
+            .map_err(|e| AppError::InvalidBasicAuthHeader(e.to_string()))?;
         let (user, secret) = self
             .user_service
-            .get_user_with_secret(&credentials.user_id)
+            .get_user_and_secret(&credentials.user_id)
             .await?;
 
         if self.verify_hash(&secret.hash, credentials.password.as_bytes()) {
             return Ok(self.sign_jwt_token(&user)?);
         }
 
-        Err(Error::msg("Invalid username/password"))
+        Err(AppError::InvalidCredentials)
     }
 
     /// Creates a hash for the prodided password
-    pub fn make_hash(&self, password: &[u8]) -> Result<String> {
+    pub fn make_hash(&self, password: &[u8]) -> Result<String, AppError> {
         let conf = Config::default();
         let salt = thread_rng().gen::<[u8; 32]>();
+        let hash = argon2::hash_encoded(password, &salt, &conf);
 
-        Ok(argon2::hash_encoded(password, &salt, &conf).map_err(Error::from)?)
+        hash.map_err(|e| AppError::UnexpectedServerError(e.to_string()))
     }
 
-    async fn store_user_secret(&self, user: &User, hash: &str) -> Result<Secret> {
+    async fn store_user_secret(&self, user: &User, hash: &str) -> Result<Secret, AppError> {
         let rows: Row = self
             .db_conn
             .query_one(
@@ -105,7 +107,7 @@ impl AuthService {
                 &[&hash, &user.id],
             )
             .await
-            .map_err(Error::from)?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(Secret {
             id: rows.get(0),
@@ -121,7 +123,7 @@ impl AuthService {
     }
 
     /// Signs a JWT token with the provided claims (`Claims`)
-    pub fn sign_jwt_token(&self, user: &User) -> Result<Token> {
+    pub fn sign_jwt_token(&self, user: &User) -> Result<Token, AppError> {
         let one_day_ms = Duration::from_secs(60 * 60 * 24).as_millis();
         let claims = Claims {
             user_id: user.id,
@@ -133,20 +135,20 @@ impl AuthService {
             &claims,
             &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
         )
-        .map_err(Error::from)?;
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(Token { token })
     }
 
     /// Verifies a JWT and retrieve the `Claims` stored on
     /// it if valid
-    pub fn verify_jwt_token(token: &str) -> Result<Claims> {
+    pub fn verify_jwt_token(token: &str) -> Result<Claims, AppError> {
         let decode_result = decode::<Claims>(
             token,
             &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
             &Validation::default(),
         )
-        .map_err(|e| Error::from(e))?;
+        .map_err(|e| AppError::UnexpectedServerError(e.to_string()))?;
 
         Ok(decode_result.claims)
     }
