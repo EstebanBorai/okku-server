@@ -5,7 +5,7 @@ use tokio::time::Duration;
 use warp::http;
 use warp::Filter;
 
-use crate::database::get_db_conn;
+use crate::database::get_db_pool;
 use crate::hub::Hub;
 use crate::middleware::{with_authorization, with_service};
 use crate::proto::input::Input;
@@ -45,8 +45,8 @@ impl Server {
     pub async fn run(&self) {
         let (input_sender, input_receiver) = mpsc::unbounded_channel::<Parcel<Input>>();
         let hub = self.hub.clone();
-        let db_conn = get_db_conn().await.unwrap();
-        let services = Services::init(db_conn);
+        let db_pool = get_db_pool().await.unwrap();
+        let services = Services::init(db_pool);
         let cors = warp::cors()
             .allow_any_origin()
             .allow_credentials(true)

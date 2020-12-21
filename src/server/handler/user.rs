@@ -20,16 +20,12 @@ pub async fn upload_avatar(
     })?;
 
     if let Some(p) = parts.into_iter().find(|part| part.name() == "image") {
-        let content_type = p.content_type();
-        let mime_type = services
-            .image_service
-            .get_mime_type(content_type.unwrap())
-            .unwrap();
+        let content_type = services.image_service.get_content_type(&p);
         let file_bytes = services.image_service.part_bytes(p).await.unwrap();
 
         return match services
             .user_service
-            .set_avatar(&uid, mime_type, file_bytes)
+            .set_avatar(&uid, &content_type, file_bytes)
             .await
         {
             Ok(avatar) => Ok(HttpResponse::<Vec<u8>>::send_file(

@@ -11,7 +11,7 @@ use uuid::Uuid;
 use warp::http::StatusCode;
 use warp::hyper::Body;
 
-use crate::database::{DbConn, Row};
+use crate::database::DbPool;
 use crate::error::AppError;
 use crate::model::{Secret, User};
 use crate::service::UserService;
@@ -22,7 +22,7 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct AuthService {
-    db_conn: Arc<DbConn>,
+    db_conn: DbPool,
     user_service: Arc<UserService>,
 }
 
@@ -47,7 +47,7 @@ pub struct Token {
 }
 
 impl AuthService {
-    pub fn new(db_conn: Arc<DbConn>, user_service: UserService) -> Self {
+    pub fn new(db_conn: DbPool, user_service: UserService) -> Self {
         Self {
             db_conn,
             user_service: Arc::new(user_service),
@@ -100,20 +100,14 @@ impl AuthService {
     }
 
     async fn store_user_secret(&self, user: &User, hash: &str) -> Result<Secret, AppError> {
-        let rows: Row = self
-            .db_conn
-            .query_one(
-                "INSERT INTO secrets(hash, user_id) VALUES ($1, $2) RETURNING id, hash, user_id",
-                &[&hash, &user.id],
-            )
-            .await
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        let secret: Secret =
+            sqlx::query_as("INSERT INTO secrets(hash, user_id) VALUES ($1, $2) RETURNING *")
+                .bind(hash)
+                .bind(user.id)
+                .fetch_one(&self.db_conn)
+                .await?;
 
-        Ok(Secret {
-            id: rows.get(0),
-            hash: rows.get(1),
-            user_id: rows.get(2),
-        })
+        Ok(secret)
     }
 
     /// Given a `hash` and the `password` validates

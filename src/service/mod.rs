@@ -1,4 +1,4 @@
-use crate::database::DbConn;
+use crate::database::DbPool;
 use std::sync::Arc;
 
 mod auth;
@@ -21,10 +21,9 @@ pub struct Services {
 pub type InjectedServices = Arc<Services>;
 
 impl Services {
-    pub fn init(db_conn: DbConn) -> Arc<Self> {
-        let db_conn = Arc::new(db_conn);
-        let user_service = user::UserService::new(db_conn.clone());
-        let auth_service = auth::AuthService::new(db_conn.clone(), user_service.clone());
+    pub fn init(db_pool: DbPool) -> Arc<Self> {
+        let user_service = user::UserService::new(db_pool.clone());
+        let auth_service = auth::AuthService::new(db_pool.clone(), user_service.clone());
 
         Arc::new(Services {
             user_service: Arc::new(user_service),

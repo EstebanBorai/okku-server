@@ -50,7 +50,10 @@ impl Client {
             })
     }
 
-    pub fn write_output<S, E>(&self, stream: S) -> impl Stream<Item = Result<warp::ws::Message, AppError>>
+    pub fn write_output<S, E>(
+        &self,
+        stream: S,
+    ) -> impl Stream<Item = Result<warp::ws::Message, AppError>>
     where
         S: TryStream<Ok = Parcel<Output>, Error = E> + Stream<Item = Result<Parcel<Output>, E>>,
         E: std::error::Error,
@@ -84,7 +87,11 @@ impl Client {
         let reading = client
             .read_input(ws_stream)
             .try_for_each(|input_parcel| async {
-                info!("Received message from {}. Parcel: {:?}", client.id.to_string(), input_parcel);
+                info!(
+                    "Received message from {}. Parcel: {:?}",
+                    client.id.to_string(),
+                    input_parcel
+                );
                 input_sender.send(input_parcel).unwrap();
                 Ok(())
             });

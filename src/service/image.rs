@@ -4,7 +4,6 @@ use std::string::ToString;
 use warp::filters::multipart::Part;
 
 use crate::error::AppError;
-use crate::model::AvatarMIMEType;
 
 #[derive(Clone)]
 pub struct ImageService;
@@ -14,12 +13,11 @@ impl ImageService {
         Self
     }
 
-    pub fn get_mime_type(&self, content_type: &str) -> Result<AvatarMIMEType, AppError> {
-        match content_type {
-            "image/png" => Ok(AvatarMIMEType::Png),
-            "image/jpeg" => Ok(AvatarMIMEType::Jpeg),
-            _ => Err(AppError::UnsupportedImage(content_type.to_string())),
-        }
+    pub fn get_content_type<'a>(&self, p: &'a Part) -> String {
+        let content_type = p.content_type();
+        let content_type = content_type.as_ref().unwrap();
+
+        content_type.to_string()
     }
 
     pub async fn part_bytes(&self, part: Part) -> Result<Vec<u8>, AppError> {

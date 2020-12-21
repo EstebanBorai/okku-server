@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::string::ToString;
 use thiserror::Error;
 use warp::http::StatusCode;
 use warp::reply::Response;
@@ -83,6 +84,18 @@ impl MSendError for AppError {
             }
             AppError::ReadMessageError(msg) | AppError::WriteMessageError(msg) => {
                 HttpResponse::new(msg, StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
+    }
+}
+
+impl From<sqlx::error::Error> for AppError {
+    fn from(e: sqlx::error::Error) -> Self {
+        match e.as_database_error() {
+            Some(db_error) => AppError::DatabaseError(db_error.to_string()),
+            None => {
+                error!("{:?}", e);
+                AppError::DatabaseError(String::from("Unrecognized database error!"))
             }
         }
     }

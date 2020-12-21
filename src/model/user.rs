@@ -1,7 +1,8 @@
 use serde::Serialize;
+use sqlx::FromRow;
 use uuid::Uuid;
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, FromRow, PartialEq, Serialize)]
 pub struct User {
     pub id: Uuid,
     pub name: String,
