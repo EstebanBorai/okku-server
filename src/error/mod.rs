@@ -35,23 +35,23 @@ pub trait MSendError: std::marker::Sized + std::fmt::Display + std::marker::Send
 
 #[derive(Clone, Debug, Error)]
 pub enum AppError {
-    #[error("Database transaction didn't success")]
+    #[error("Database transaction did not succeed: {0}")]
     DatabaseError(String),
-    #[error("Unexpected server error")]
+    #[error("Unexpected server error: {0}")]
     UnexpectedServerError(String),
     #[error("Invalid credentials were provided")]
     InvalidCredentials,
     #[error("Username `{0}` is taken")]
     UsernameTaken(String),
-    #[error("Invalid basic authentication header")]
+    #[error("Invalid basic authentication header: {0}")]
     InvalidBasicAuthHeader(String),
     #[error("Unsupported Content-Type for \"image\": {0}")]
     UnsupportedImage(String),
-    #[error("An error ocurred reading the image file")]
+    #[error("An error ocurred reading the image file: {0}")]
     ReadImageError(String),
-    #[error("Failed to read input (client) message")]
+    #[error("Failed to read input (client) message: {0}")]
     ReadMessageError(String),
-    #[error("Failed to write output (server) message")]
+    #[error("Failed to write output (server) message: {0}")]
     WriteMessageError(String),
 }
 
@@ -62,27 +62,35 @@ impl MSendError for AppError {
     {
         match self {
             AppError::DatabaseError(msg) => {
+                error!("{}", msg);
                 HttpResponse::new(&msg, StatusCode::INTERNAL_SERVER_ERROR)
             }
             AppError::UnexpectedServerError(msg) => {
+                error!("{}", msg);
                 HttpResponse::new(&msg, StatusCode::INTERNAL_SERVER_ERROR)
             }
             AppError::InvalidCredentials => {
+                error!("{}", &self.message());
                 HttpResponse::new(&self.message(), StatusCode::FORBIDDEN)
             }
             AppError::UsernameTaken(_) => {
+                error!("{}", &self.message());
                 HttpResponse::new(&self.message(), StatusCode::BAD_REQUEST)
             }
             AppError::InvalidBasicAuthHeader(msg) => {
+                error!("{}", msg);
                 HttpResponse::new(&msg, StatusCode::BAD_REQUEST)
             }
             AppError::UnsupportedImage(_) => {
+                error!("{}", &self.message());
                 HttpResponse::new(&self.message(), StatusCode::BAD_REQUEST)
             }
             AppError::ReadImageError(msg) => {
+                error!("{}", msg);
                 HttpResponse::new(msg, StatusCode::INTERNAL_SERVER_ERROR)
             }
             AppError::ReadMessageError(msg) | AppError::WriteMessageError(msg) => {
+                error!("{}", msg);
                 HttpResponse::new(msg, StatusCode::INTERNAL_SERVER_ERROR)
             }
         }

@@ -41,6 +41,33 @@ A [warp](https://github.com/seanmonstar/warp) server will listen on `ws://127.0.
 You must complete all steps on [Development](#development) section in order
 to follow the steps on this section.
 
+## Database Management
+
+A database connection pool for the PostgreSQL database instance is
+available and managed using the SQLX crate.
+
+The `sqlx-cli` version included is `0.2.0`, which resides inside of the
+`bin/` directory.
+
+In order to create a migration you must execute:
+
+```shell
+bin/sqlx-cli migrate add <name>
+```
+
+Remember to keep an eye on new migrations, try to build the habit of
+running migrations when you update your local version or before running
+the project for development.
+
+In order to run available migrations you must run:
+
+```shell
+# make sure the database is available on the same
+# URL specified on the "DATABASE_URL" environment
+# variable
+bin/sqlx-cli migrate run
+```
+
 ## API Reference
 
 Description | URI | Method | HTTP Headers | Req. Body | Res. Body
