@@ -1,6 +1,8 @@
+use image::ImageError;
 use serde::Serialize;
 use std::string::ToString;
 use thiserror::Error;
+use url::ParseError as UrlParseError;
 use warp::http::StatusCode;
 use warp::reply::Response;
 
@@ -53,6 +55,10 @@ pub enum AppError {
     ReadMessageError(String),
     #[error("Failed to write output (server) message: {0}")]
     WriteMessageError(String),
+    #[error("Failed to process the provided image: {0}")]
+    ImageProcessingFailed(String),
+    #[error("Error parsing the provided URL: {0}")]
+    InvalidURLProvided(String),
 }
 
 impl MSendError for AppError {
@@ -93,6 +99,14 @@ impl MSendError for AppError {
                 error!("{}", msg);
                 HttpResponse::new(msg, StatusCode::INTERNAL_SERVER_ERROR)
             }
+            AppError::ImageProcessingFailed(msg) => {
+                error!("{}", msg);
+                HttpResponse::new(msg, StatusCode::INTERNAL_SERVER_ERROR)
+            }
+            AppError::InvalidURLProvided(msg) => {
+                error!("{}", msg);
+                HttpResponse::new(msg, StatusCode::BAD_REQUEST)
+            }
         }
     }
 }
@@ -106,5 +120,17 @@ impl From<sqlx::error::Error> for AppError {
                 AppError::DatabaseError(String::from("Unrecognized database error!"))
             }
         }
+    }
+}
+
+impl From<ImageError> for AppError {
+    fn from(e: ImageError) -> Self {
+        AppError::ImageProcessingFailed(e.to_string())
+    }
+}
+
+impl From<UrlParseError> for AppError {
+    fn from(e: UrlParseError) -> Self {
+        AppError::InvalidURLProvided(e.to_string())
     }
 }

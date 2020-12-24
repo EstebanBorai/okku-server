@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::database::DbPool;
 use crate::error::AppError;
-use crate::model::{Avatar, Secret, User};
+use crate::model::{avatar::Avatar, secret::Secret, user::User};
 
 #[derive(Clone)]
 pub struct UserService {

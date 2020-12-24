@@ -11,7 +11,7 @@ struct HealthCheck {
 /// retrieve its results
 pub async fn check() -> Result<impl warp::Reply, std::convert::Infallible> {
     let pool = get_db_pool().await.expect("Unable to get database pool");
-    let row: (i64,) = sqlx::query_as("SELECT 1")
+    let _: (i64,) = sqlx::query_as("SELECT 1")
         .fetch_one(&pool)
         .await
         .expect("Unable to query database");

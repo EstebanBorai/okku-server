@@ -1,4 +1,4 @@
-use crate::model::Message;
+use crate::model::message::Message;
 
 #[derive(Default)]
 pub struct Feed {

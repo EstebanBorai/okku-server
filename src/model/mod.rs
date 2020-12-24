@@ -1,11 +1,6 @@
-mod avatar;
-mod feed;
-mod message;
-mod secret;
-mod user;
-
-pub use avatar::*;
-pub use feed::*;
-pub use message::*;
-pub use secret::*;
-pub use user::*;
+pub mod avatar;
+pub mod feed;
+pub mod image;
+pub mod message;
+pub mod secret;
+pub mod user;

@@ -6,18 +6,22 @@ use warp::http;
 use warp::Filter;
 
 use crate::database::get_db_pool;
+use crate::handler;
 use crate::hub::Hub;
 use crate::middleware::{with_authorization, with_service};
 use crate::proto::input::Input;
 use crate::proto::parcel::Parcel;
-use crate::service::Client;
-use crate::service::{AuthService, Services};
+use crate::service::auth::AuthService;
+use crate::service::chat::Client;
+use crate::service::Services;
 
-mod handler;
 pub mod http_response;
 
 /// Max size for Avatar file. 3 MB in bytes
 const MAX_AVATAR_IMAGE_SIZE: u64 = 3_000_000;
+
+/// Max size for image file. 1 GB in bytes.
+const MAX_IMAGE_SIZE: u64 = 1_000_000_000;
 
 /// MSend server implementation
 pub struct Server {
@@ -130,13 +134,40 @@ impl Server {
                 .and_then(handler::user::download_avatar),
         );
 
+        let images = api.and(v1).and(warp::path("images"));
+
+        let upload_image = images
+            .and(warp::post())
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::multipart::form().max_length(MAX_IMAGE_SIZE))
+            .and_then(handler::image::upload);
+
+        let get_image_info = images
+            .and(warp::get())
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::path::param())
+            .and(warp::path("info"))
+            .and_then(handler::image::info);
+
+        let download_image = images
+            .and(warp::get())
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::path::param())
+            .and_then(handler::image::download);
+
         let routes = warp::any()
             .and(
                 chat.or(auth)
                     .or(health)
                     .or(upload_avatar)
                     .or(download_avatar)
-                    .or(update_avatar),
+                    .or(update_avatar)
+                    .or(get_image_info)
+                    .or(download_image)
+                    .or(upload_image),
             )
             .with(cors);
 

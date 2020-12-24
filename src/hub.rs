@@ -1,10 +1,3 @@
-use crate::model::{Feed, Message, User};
-use crate::proto::input::{Input, JoinInput, PostInput};
-use crate::proto::output::{
-    JoinedOutput, MessageOutput, Output, OutputError, PostedOutput, UserJoinedOutput,
-    UserLeftOutput, UserOutput, UserPostedOutput,
-};
-use crate::proto::parcel::Parcel;
 use chrono::Utc;
 use futures::StreamExt;
 use lazy_static::lazy_static;
@@ -15,6 +8,14 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::{broadcast, RwLock};
 use tokio::time;
 use uuid::Uuid;
+
+use crate::model::{feed::Feed, message::Message, user::User};
+use crate::proto::input::{Input, JoinInput, PostInput};
+use crate::proto::output::{
+    JoinedOutput, MessageOutput, Output, OutputError, PostedOutput, UserJoinedOutput,
+    UserLeftOutput, UserOutput, UserPostedOutput,
+};
+use crate::proto::parcel::Parcel;
 
 const MAX_MESSAGE_BODY_SIZE: usize = 256;
 const OUTPUT_CHANNEL_SIZE: usize = 16;

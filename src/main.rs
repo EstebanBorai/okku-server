@@ -5,6 +5,7 @@ use std::env;
 
 mod database;
 mod error;
+mod handler;
 mod hub;
 mod middleware;
 mod model;
@@ -25,7 +26,7 @@ async fn main() {
         .parse::<u16>()
         .expect("Invalid PORT value, expected u16");
 
-    database::ping().await;
+    database::ping().await.expect("Unable to ping database");
 
     let server = server::Server::new(port);
 

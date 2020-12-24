@@ -6,7 +6,8 @@ use warp::reject::Rejection;
 
 use crate::error::MSendError;
 use crate::server::http_response::HttpResponse;
-use crate::service::{Claims, InjectedServices};
+use crate::service::auth::Claims;
+use crate::service::InjectedServices;
 
 pub async fn upload_avatar(
     _: Claims,

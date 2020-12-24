@@ -13,8 +13,9 @@ use warp::hyper::Body;
 
 use crate::database::DbPool;
 use crate::error::AppError;
-use crate::model::{Secret, User};
-use crate::service::UserService;
+use crate::model::{secret::Secret, user::User};
+
+use super::user::UserService;
 
 lazy_static! {
     static ref JWT_SECRET: String = env::var("JWT_SECRET").unwrap();
@@ -47,10 +48,10 @@ pub struct Token {
 }
 
 impl AuthService {
-    pub fn new(db_conn: DbPool, user_service: UserService) -> Self {
+    pub fn new(db_conn: DbPool, user_service: Arc<UserService>) -> Self {
         Self {
             db_conn,
-            user_service: Arc::new(user_service),
+            user_service,
         }
     }
 

@@ -1,34 +1,41 @@
-use crate::database::DbPool;
 use std::sync::Arc;
 
-mod auth;
-mod chat;
-mod image;
-mod user;
+use crate::database::DbPool;
 
-pub use auth::*;
-pub use chat::*;
-pub use image::*;
-pub use user::*;
+pub mod auth;
+pub mod chat;
+pub mod image;
+pub mod url;
+pub mod user;
 
 #[derive(Clone)]
 pub struct Services {
-    pub user_service: Arc<user::UserService>,
     pub auth_service: Arc<auth::AuthService>,
-    pub image_service: image::ImageService,
+    pub image_service: Arc<image::ImageService>,
+    pub url_service: Arc<url::UrlService>,
+    pub user_service: Arc<user::UserService>,
 }
 
 pub type InjectedServices = Arc<Services>;
 
 impl Services {
     pub fn init(db_pool: DbPool) -> Arc<Self> {
-        let user_service = user::UserService::new(db_pool.clone());
-        let auth_service = auth::AuthService::new(db_pool.clone(), user_service.clone());
+        let url_service = Arc::new(url::UrlService::new());
+        let user_service = Arc::new(user::UserService::new(db_pool.clone()));
+        let image_service = Arc::new(image::ImageService::new(
+            db_pool.clone(),
+            url_service.clone(),
+        ));
+        let auth_service = Arc::new(auth::AuthService::new(
+            db_pool.clone(),
+            user_service.clone(),
+        ));
 
         Arc::new(Services {
-            user_service: Arc::new(user_service),
-            auth_service: Arc::new(auth_service),
-            image_service: ImageService::new(),
+            auth_service,
+            image_service,
+            url_service,
+            user_service,
         })
     }
 }

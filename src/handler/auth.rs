@@ -2,7 +2,8 @@ use warp::http::StatusCode;
 
 use crate::error::MSendError;
 use crate::server::http_response::HttpResponse;
-use crate::service::{InjectedServices, Token, UserRegister};
+use crate::service::auth::{Token, UserRegister};
+use crate::service::InjectedServices;
 
 pub async fn signup(
     user_register: UserRegister,

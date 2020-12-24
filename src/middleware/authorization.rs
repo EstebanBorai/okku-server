@@ -1,11 +1,12 @@
-use crate::server::http_response::HttpResponse;
-use crate::service::Claims;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use lazy_static::lazy_static;
 use serde::Serialize;
 use std::env;
 use warp::http::StatusCode;
 use warp::{reject::Reject, Filter, Rejection};
+
+use crate::server::http_response::HttpResponse;
+use crate::service::auth::Claims;
 
 lazy_static! {
     static ref JWT_SECRET: String = env::var("JWT_SECRET").unwrap();
