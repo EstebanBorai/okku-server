@@ -2,8 +2,6 @@ use bytes::BufMut;
 use futures::TryStreamExt;
 use image::{load_from_memory, GenericImageView};
 use image::imageops::FilterType;
-use serde::Serialize;
-use sqlx::FromRow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::string::ToString;
@@ -14,36 +12,9 @@ use warp::filters::multipart::Part;
 
 use crate::database::DbPool;
 use crate::error::{AppError, Result};
-use crate::model::image::Image;
+use crate::model::image::{Image, ImageResource};
 
 use super::url::UrlService;
-
-#[derive(Clone, FromRow, Serialize)]
-pub struct ImageResource {
-    pub id: Uuid,
-    pub owner_id: Uuid,
-    pub height: i16,
-    pub width: i16,
-    pub mime: String,
-    pub filename: String,
-    pub url: String,
-    pub size: i32,
-}
-
-impl ImageResource {
-    pub fn from_image(img: Image, owner_id: Uuid) -> Self {
-        Self {
-            owner_id,
-            id: img.id,
-            height: img.height,
-            width: img.width,
-            mime: img.mime,
-            filename: img.filename,
-            url: img.url,
-            size: img.size,
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct ImageService {
@@ -84,7 +55,7 @@ impl ImageService {
         })
     }
 
-    pub async fn save(&self, image: Image, owner_id: Uuid) -> Result<Image> {
+    pub async fn save(&self, image: &Image, owner_id: Uuid) -> Result<Image> {
         sqlx::query_as(
             r#"
         INSERT INTO images (
@@ -172,7 +143,7 @@ impl ImageService {
         }
     }
 
-    pub async fn resize_image(&self, image: &Image, height: u32, width: u32) -> Result<Image> {
+    pub fn resize_image(&self, image: &Image, height: u32, width: u32) -> Result<Image> {
         let dynamic = load_from_memory(image.image.as_slice())?;
         let dynamic = dynamic.resize(width, height, FilterType::CatmullRom);
         let bytes = dynamic.as_bytes();

@@ -1,5 +1,4 @@
 use futures::TryStreamExt;
-use std::string::ToString;
 use uuid::Uuid;
 use warp::filters::multipart::{FormData, Part};
 use warp::reject::Rejection;

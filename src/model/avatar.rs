@@ -2,14 +2,14 @@ use serde::Serialize;
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use super::image::Image;
+use super::image::ImageResource;
 
 #[derive(FromRow, Serialize)]
 pub struct Avatar {
     pub id: Uuid,
-    pub large: Image,
-    pub medium: Image,
-    pub normal: Image,
-    pub small: Image,
-    pub retina_1x: Image,
+    pub large: ImageResource,
+    pub medium: ImageResource,
+    pub normal: ImageResource,
+    pub small: ImageResource,
+    pub retina_1x: ImageResource,
 }

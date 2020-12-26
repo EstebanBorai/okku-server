@@ -5,9 +5,9 @@ use warp::http::StatusCode;
 use warp::reject::Rejection;
 
 use crate::error::MSendError;
+use crate::model::image::ImageResource;
 use crate::server::http_response::HttpResponse;
 use crate::service::auth::Claims;
-use crate::service::image::ImageResource;
 use crate::service::InjectedServices;
 
 pub async fn upload(
@@ -29,7 +29,7 @@ pub async fn upload(
 
         return match services
             .image_service
-            .save(image.unwrap(), claims.user_id)
+            .save(&image.unwrap(), claims.user_id)
             .await
         {
             Ok(image) => Ok(HttpResponse::with_payload(
