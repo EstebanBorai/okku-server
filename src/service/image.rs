@@ -1,6 +1,7 @@
 use bytes::BufMut;
 use futures::TryStreamExt;
 use image::{load_from_memory, GenericImageView};
+use image::imageops::FilterType;
 use serde::Serialize;
 use sqlx::FromRow;
 use std::collections::hash_map::DefaultHasher;
@@ -11,9 +12,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use warp::filters::multipart::Part;
 
-use crate::error::AppError;
+use crate::database::DbPool;
+use crate::error::{AppError, Result};
 use crate::model::image::Image;
-use crate::{database::DbPool, error::Result};
 
 use super::url::UrlService;
 
@@ -58,7 +59,7 @@ impl ImageService {
         }
     }
 
-    pub async fn from_part<'a>(&self, p: Part) -> Result<Image> {
+    pub async fn from_part(&self, p: Part) -> Result<Image> {
         let mime = self.get_content_type(&p);
         let bytes = self.part_bytes(p).await?;
         let image = bytes.clone();
@@ -169,6 +170,29 @@ impl ImageService {
             Ok(bytes) => Ok(bytes),
             Err(error) => Err(error.unwrap()),
         }
+    }
+
+    pub async fn resize_image(&self, image: &Image, height: u32, width: u32) -> Result<Image> {
+        let dynamic = load_from_memory(image.image.as_slice())?;
+        let dynamic = dynamic.resize(width, height, FilterType::CatmullRom);
+        let bytes = dynamic.as_bytes();
+        let size = bytes.len() as i32;
+        let filename = self.make_filename(size, &image.mime)?;
+        let url = self
+            .url_service
+            .create_server_url(&format!("api/v1/images/{}", filename))?
+            .to_string();
+
+        Ok(Image {
+            id: uuid::Uuid::default(),
+            url,
+            filename: String::from(filename),
+            image: bytes.to_vec(),
+            size,
+            mime: image.mime.clone(),
+            height: height as i16,
+            width: width as i16,
+        })
     }
 
     fn make_filename(&self, size: i32, mime: &str) -> Result<String> {

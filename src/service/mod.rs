@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::database::DbPool;
 
 pub mod auth;
+pub mod avatar;
 pub mod chat;
 pub mod image;
 pub mod url;

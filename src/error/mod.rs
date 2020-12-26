@@ -59,6 +59,8 @@ pub enum AppError {
     ImageProcessingFailed(String),
     #[error("Error parsing the provided URL: {0}")]
     InvalidURLProvided(String),
+    #[error("Invalid image size. The image is too small, minimum image size is 600x600, provided is: {0}x{1}")]
+    InvalidAvatarImageSize(i32, i32)
 }
 
 impl MSendError for AppError {
@@ -106,6 +108,10 @@ impl MSendError for AppError {
             AppError::InvalidURLProvided(msg) => {
                 error!("{}", msg);
                 HttpResponse::new(msg, StatusCode::BAD_REQUEST)
+            },
+            AppError::InvalidAvatarImageSize(width, height) => {
+                error!("{}", &self.message());
+                HttpResponse::new(&self.message(), StatusCode::BAD_REQUEST)
             }
         }
     }
