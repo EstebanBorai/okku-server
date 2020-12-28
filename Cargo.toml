@@ -1,6 +1,6 @@
 [package]
 name = "msend-server"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Esteban Borai <estebanborai@gmail.com>"]
 edition = "2018"
 
