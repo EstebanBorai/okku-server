@@ -1,5 +1,6 @@
 #!/bin/bash
 
+HOST="127.0.0.1"
 RUST_LOG="warn,info,error,debug"
 PORT="3000"
 POSTGRES_USER="msend"
@@ -8,6 +9,7 @@ POSTGRES_DB="msend"
 JWT_SECRET="msend"
 
 echo -e \
+  "HOST=$HOST\n" \
   "RUST_LOG=$RUST_LOG\n" \
   "PORT=$PORT\n" \
   "POSTGRES_USER=$POSTGRES_USER\n" \

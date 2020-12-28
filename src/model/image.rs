@@ -11,7 +11,7 @@ pub struct Image {
     pub url: String,
     pub filename: String,
     pub size: i32,
-    pub image: Vec<u8>,
+    pub bytes: Vec<u8>,
 }
 
 #[derive(Clone, FromRow, Serialize)]

@@ -12,6 +12,7 @@ pub mod user;
 #[derive(Clone)]
 pub struct Services {
     pub auth_service: Arc<auth::AuthService>,
+    pub avatar_service: Arc<avatar::AvatarService>,
     pub image_service: Arc<image::ImageService>,
     pub url_service: Arc<url::UrlService>,
     pub user_service: Arc<user::UserService>,
@@ -31,9 +32,11 @@ impl Services {
             db_pool.clone(),
             user_service.clone(),
         ));
+        let avatar_service = Arc::new(avatar::AvatarService::new(db_pool.clone(), image_service.clone()));
 
         Arc::new(Services {
             auth_service,
+            avatar_service,
             image_service,
             url_service,
             user_service,

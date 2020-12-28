@@ -62,6 +62,38 @@ impl AvatarService {
         })
     }
 
+    pub async fn find(&self, owner_id: Uuid) -> Result<Avatar> {
+        let mut rows = sqlx::query("SELECT * FROM avatars WHERE user_id = $1")
+            .bind(&owner_id)
+            .fetch(&self.db_pool);
+
+        if let Some(row) =  rows.try_next().await? {
+            let id = row.try_get("id")?;
+            let large_id: Uuid= row.try_get("large_id")?;
+            let medium_id: Uuid = row.try_get("medium_id")?;
+            let normal_id: Uuid = row.try_get("normal_id")?;
+            let small_id: Uuid = row.try_get("small_id")?;
+            let retina_1x_id: Uuid = row.try_get("retina_1x_id")?;
+
+            let large = self.image_service.get_info(large_id).await?;
+            let medium = self.image_service.get_info(medium_id).await?;
+            let normal = self.image_service.get_info(normal_id).await?;
+            let small = self.image_service.get_info(small_id).await?;
+            let retina_1x = self.image_service.get_info(retina_1x_id).await?;
+
+            return Ok(Avatar {
+                id,
+                large,
+                medium,
+                normal,
+                small,
+                retina_1x,
+            });
+        }
+
+        Err(AppError::UnexpectedServerError(String::from("Unable to fetch avatar from the database")))
+    }
+
     /// THIS NEEDS A REFACTOR ASAP
     pub async fn save(&self, owner_id: Uuid, variations: &AvatarVariations) -> Result<Avatar> {
         // as we want to make sure all of these images are inserted as expected
@@ -78,7 +110,7 @@ impl AvatarService {
         INSERT INTO avatars (
             user_id,
             large_id,
-            medium_id,&
+            medium_id,
             normal_id,
             small_id,
             retina_1x_id

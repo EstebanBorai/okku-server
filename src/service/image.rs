@@ -33,7 +33,7 @@ impl ImageService {
     pub async fn from_part(&self, p: Part) -> Result<Image> {
         let mime = self.get_content_type(&p);
         let bytes = self.part_bytes(p).await?;
-        let image = bytes.clone();
+        let bytes = bytes.clone();
         let size: i32 = bytes.len() as i32;
         let img = load_from_memory(&bytes)?;
         let (height, width) = img.dimensions();
@@ -47,7 +47,7 @@ impl ImageService {
             id: uuid::Uuid::default(),
             url,
             filename: String::from(filename),
-            image,
+            bytes,
             size,
             mime,
             height: height as i16,
@@ -65,7 +65,7 @@ impl ImageService {
             filename,
             url,
             size,
-            image,
+            bytes,
             owner_id
         ) VALUES (
             $1,
@@ -84,8 +84,8 @@ impl ImageService {
         .bind(&image.filename)
         .bind(&image.url)
         .bind(&image.size)
-        .bind(&image.image.as_slice())
-        .bind(owner_id)
+        .bind(&image.bytes.as_slice())
+        .bind(&owner_id)
         .fetch_one(&self.db_conn)
         .await
         .map_err(AppError::from)
@@ -103,9 +103,11 @@ impl ImageService {
         sqlx::query_as(
             r#"
         SELECT
+            id,
             height,
             width,
             mime,
+            url,
             filename,
             size,
             owner_id
@@ -144,7 +146,7 @@ impl ImageService {
     }
 
     pub fn resize_image(&self, image: &Image, height: u32, width: u32) -> Result<Image> {
-        let dynamic = load_from_memory(image.image.as_slice())?;
+        let dynamic = load_from_memory(image.bytes.as_slice())?;
         let dynamic = dynamic.resize(width, height, FilterType::CatmullRom);
         let bytes = dynamic.as_bytes();
         let size = bytes.len() as i32;
@@ -158,7 +160,7 @@ impl ImageService {
             id: uuid::Uuid::default(),
             url,
             filename: String::from(filename),
-            image: bytes.to_vec(),
+            bytes: bytes.to_vec(),
             size,
             mime: image.mime.clone(),
             height: height as i16,

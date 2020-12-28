@@ -60,7 +60,7 @@ pub async fn download(
     url: String,
 ) -> Result<impl warp::Reply, std::convert::Infallible> {
     match services.image_service.download(url).await {
-        Ok(image) => Ok(HttpResponse::send_file(image.image, &image.mime)),
+        Ok(image) => Ok(HttpResponse::send_file(image.bytes, &image.mime)),
         Err(e) => Ok(e.into_response()),
     }
 }
