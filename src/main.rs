@@ -1,17 +1,11 @@
 #[macro_use]
 extern crate log;
 
-use std::env;
-
-mod database;
+mod application;
+mod domain;
 mod error;
-mod handler;
-mod hub;
-mod middleware;
-mod model;
-mod proto;
+mod infrastructure;
 mod server;
-mod service;
 
 #[tokio::main]
 async fn main() {
@@ -21,19 +15,7 @@ async fn main() {
 
     env_logger::init();
 
-    let port = env::var("PORT")
-        .expect("Missing PORT environment variable")
-        .parse::<u16>()
-        .expect("Invalid PORT value, expected u16");
+    let http_server = server::Http::new(3000_u16);
 
-    database::ping().await.expect("Unable to ping database");
-
-    let server = server::Server::new(port);
-
-    info!(
-        "{}",
-        format!("Server listening on: ws://127.0.0.1:{}", port)
-    );
-
-    server.run().await;
+    http_server.serve().await.expect("Failed to run server");
 }
