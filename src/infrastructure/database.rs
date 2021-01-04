@@ -11,8 +11,11 @@ const DB_POOL_MAX_CONNECTIONS: u32 = 5;
 pub type DbPool = Pool<Postgres>;
 
 lazy_static! {
-    static ref DB_POOL: AsyncOnce<DbPool> =
-        AsyncOnce::new(async { create_pool().await.expect("Unable to create a database pool") });
+    static ref DB_POOL: AsyncOnce<DbPool> = AsyncOnce::new(async {
+        create_pool()
+            .await
+            .expect("Unable to create a database pool")
+    });
 }
 
 pub async fn create_pool() -> Result<Pool<Postgres>> {

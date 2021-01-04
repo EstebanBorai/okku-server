@@ -1,12 +1,14 @@
 use warp::http;
 use warp::Filter;
 
-use crate::application::service::Services;
 use crate::error::Result;
 use crate::infrastructure::database::{get_db_pool, ping};
+use crate::{application::service::Services, domain::file};
 
 use super::handler;
-use super::middleware::with_service;
+use super::middleware::{with_authorization, with_service};
+
+const MAX_FILE_SIZE: u64 = 1_000_000;
 
 pub struct Http {
     pub(crate) port: u16,
@@ -54,7 +56,25 @@ impl Http {
             .and(with_service(services.clone()))
             .and_then(handler::auth::login);
 
-        let routes = warp::any().and(signup.or(login)).with(cors);
+        let files = api_v1.and(warp::path("files"));
+
+        let upload = files
+            .and(warp::post())
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
+            .and_then(handler::files::upload);
+
+        let download = files
+            .and(warp::get())
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::path::param())
+            .and_then(handler::files::download);
+
+        let routes = warp::any()
+            .and(signup.or(login.or(upload.or(download))))
+            .with(cors);
         let routes = routes.recover(handler::rejection::handle_rejection);
 
         warp::serve(routes).bind(([127, 0, 0, 1], self.port)).await;
