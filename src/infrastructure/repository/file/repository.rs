@@ -4,6 +4,7 @@ use sqlx::Row;
 use std::convert::TryInto;
 use uuid::Uuid;
 
+use crate::domain::avatar::FileServiceRepository;
 use crate::domain::file::{File, FileRepository};
 use crate::error::{Error, Result};
 use crate::infrastructure::database::DbPool;
@@ -19,6 +20,8 @@ impl Repository {
         Self { db_pool }
     }
 }
+
+impl FileServiceRepository for Repository {}
 
 #[async_trait]
 impl FileRepository for Repository {

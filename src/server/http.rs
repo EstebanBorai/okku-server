@@ -1,9 +1,9 @@
 use warp::http;
 use warp::Filter;
 
+use crate::application::service::Services;
 use crate::error::Result;
 use crate::infrastructure::database::{get_db_pool, ping};
-use crate::{application::service::Services, domain::file};
 
 use super::handler;
 use super::middleware::{with_authorization, with_service};
@@ -58,22 +58,31 @@ impl Http {
 
         let files = api_v1.and(warp::path("files"));
 
-        let upload = files
+        let upload_file = files
             .and(warp::post())
             .and(with_authorization())
             .and(with_service(services.clone()))
             .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
             .and_then(handler::files::upload);
 
-        let download = files
+        let download_file = files
             .and(warp::get())
             .and(with_authorization())
             .and(with_service(services.clone()))
             .and(warp::path::param())
             .and_then(handler::files::download);
 
+        let avatars = api_v1.and(warp::path("avatars"));
+
+        let upload_avatar = avatars
+            .and(warp::post())
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
+            .and_then(handler::avatars::upload);
+
         let routes = warp::any()
-            .and(signup.or(login.or(upload.or(download))))
+            .and(signup.or(login.or(upload_file.or(download_file.or(upload_avatar)))))
             .with(cors);
         let routes = routes.recover(handler::rejection::handle_rejection);
 

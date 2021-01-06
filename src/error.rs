@@ -1,4 +1,5 @@
 use http_auth_basic::AuthBasicError;
+use image::ImageError;
 use sqlx::error::Error as SqlxError;
 use std::string::ToString;
 use std::time::SystemTimeError;
@@ -34,6 +35,12 @@ pub enum Error {
     ReadFileError(String),
     #[error("The file: {0}, doesn't exist")]
     FileNotFound(String),
+    #[error("An error ocurred reading the provided image, {0}")]
+    FailedToReadImage(String),
+    #[error("Avatar image is too small, minimum size is 300x300, provided {0}x{1}")]
+    AvatarImageIsTooSmall(u32, u32),
+    #[error("Avatar image ratio is not valid, expected image of 1:1 ratio, provided an image with dimensions {0}x{1} (Must be a square)")]
+    AvatarImageIsNot1_1(u32, u32),
 }
 
 impl Reject for Error {}
@@ -66,5 +73,11 @@ impl From<AuthBasicError> for Error {
 impl From<UrlError> for Error {
     fn from(e: UrlError) -> Self {
         Error::URLParsingError(e.to_string())
+    }
+}
+
+impl From<ImageError> for Error {
+    fn from(e: ImageError) -> Self {
+        Error::FailedToReadImage(e.to_string())
     }
 }

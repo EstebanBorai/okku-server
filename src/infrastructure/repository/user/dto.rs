@@ -5,8 +5,8 @@ use crate::domain::user::User;
 
 #[derive(Debug, FromRow)]
 pub struct UserDTO {
-    pub(crate) id: Uuid,
-    pub(crate) name: String,
+    pub id: Uuid,
+    pub name: String,
 }
 
 impl Into<User> for UserDTO {
