@@ -1,13 +1,10 @@
-use futures::TryStreamExt;
 use serde::Serialize;
 use uuid::Uuid;
-use warp::filters::multipart::{FormData, Part};
 use warp::http::StatusCode;
 use warp::reject::Rejection;
 
 use crate::application::service::Claims;
 use crate::application::service::Services;
-use crate::server::utils::File;
 use crate::server::utils::Response;
 
 #[derive(Serialize)]

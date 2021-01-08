@@ -11,8 +11,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, ThisError)]
 pub enum Error {
-    #[error("Validation failed, {0}")]
-    Validation(String),
     #[error("Database related error, {0}")]
     DatabaseError(String, SqlxError),
     #[error("Unable to hash password, {0}")]
@@ -41,6 +39,12 @@ pub enum Error {
     AvatarImageIsTooSmall(u32, u32),
     #[error("Avatar image ratio is not valid, expected image of 1:1 ratio, provided an image with dimensions {0}x{1} (Must be a square)")]
     AvatarImageIsNot1_1(u32, u32),
+    #[error("The value provided is not a valid email address: {0}")]
+    InvalidEmailAddress(String),
+    #[error("Invalid username, username must have between 7 and 20 alphanumeric characters, and only dot (.) is allowed")]
+    InvalidUsername(String),
+    #[error("User with name {0} wasn't found")]
+    UserByNameNotFound(String),
 }
 
 impl Reject for Error {}

@@ -81,9 +81,21 @@ impl Http {
             .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
             .and_then(handler::avatars::upload);
 
-        let routes = warp::any()
-            .and(signup.or(login.or(upload_file.or(download_file.or(upload_avatar)))))
-            .with(cors);
+        let profiles = api_v1.and(warp::path("profiles"));
+
+        let create_profile = profiles
+            .and(warp::post())
+            .and(with_authorization())
+            .and(warp::body::json())
+            .and(with_service(services.clone()))
+            .and_then(handler::profiles::create);
+
+        let routes =
+            warp::any()
+                .and(signup.or(
+                    login.or(upload_file.or(download_file.or(upload_avatar.or(create_profile)))),
+                ))
+                .with(cors);
         let routes = routes.recover(handler::rejection::handle_rejection);
 
         warp::serve(routes).bind(([127, 0, 0, 1], self.port)).await;
