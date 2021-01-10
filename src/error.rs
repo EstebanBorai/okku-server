@@ -2,10 +2,14 @@ use http_auth_basic::AuthBasicError;
 use image::ImageError;
 use sqlx::error::Error as SqlxError;
 use std::string::ToString;
+use std::str::Utf8Error;
 use std::time::SystemTimeError;
 use thiserror::Error as ThisError;
+use tokio::sync::broadcast::SendError;
 use url::ParseError as UrlError;
 use warp::reject::Reject;
+
+use crate::domain::chat::Parcel;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -43,8 +47,14 @@ pub enum Error {
     InvalidEmailAddress(String),
     #[error("Invalid username, username must have between 7 and 20 alphanumeric characters, and only dot (.) is allowed")]
     InvalidUsername(String),
-    #[error("User with name {0} wasn't found")]
-    UserByNameNotFound(String),
+    #[error("Unable to send Parcel")]
+    SendParcelError(String),
+    #[error("Invalid UTF-8 provided, {0}")]
+    InvalidUtf8(String),
+    #[error("An error ocurred reading a message from the WebSocket: {0}")]
+    WebSocketReadMessageError(String),
+    #[error("An error ocurred writing a message to the WebSocket: {0}")]
+    WebSocketWriteMessageError(String),
 }
 
 impl Reject for Error {}
@@ -83,5 +93,11 @@ impl From<UrlError> for Error {
 impl From<ImageError> for Error {
     fn from(e: ImageError) -> Self {
         Error::FailedToReadImage(e.to_string())
+    }
+}
+
+impl From<Utf8Error> for Error {
+    fn from(e: Utf8Error) -> Self {
+        Error::InvalidUtf8(e.to_string())
     }
 }

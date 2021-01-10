@@ -43,7 +43,7 @@ curl --verbose \
 curl -i \
      -X PUT \
      -H "Content-Type: multipart/form-data" \
-     -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiOGNlNjJhZmUtMTNhNi00MDE5LWEyOWEtNGI3OTI1NzFhNTcwIn0.DHPtx021HIYD_-I6AjZ3A0LeorVc_B0KbCOd67skunY" \
-     -F "image=@test.png" \
-     http://127.0.0.1:3000/api/v1/users/avatar/7f855b52-4eb5-4e18-a235-faff0378b6e3
+     -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiNzNiOGFiZjctMGMwMy00ZTFkLWJlMTctNWJkZWYxNDY4ZGZkIiwiZXhwIjoxNjA5ODkxMzI4NDQyfQ.HY5A_uL1iGQVGWdVnvVguPuBM2WbHavLzFYPR9uQoGo" \
+     -F "avatar=@test.png" \
+     http://0.0.0.0:3000/api/v1/profiles/avatar
 ```

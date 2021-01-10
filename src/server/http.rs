@@ -42,16 +42,23 @@ impl Http {
         let api_v1 = api.and(warp::path("v1"));
         let auth = api_v1.and(warp::path("auth"));
 
+        let chat = api_v1.and(warp::path("chat"))
+            .and(warp::ws())
+            .and(with_service(services.clone()))
+            .map(move |ws: warp::ws::Ws, services: Services| {
+                ws.on_upgrade(move |web_socker| async move {
+                    info!("Upgraded");
+                })
+            });
+
         let signup = auth
             .and(warp::path("signup"))
-            .and(warp::post())
             .and(warp::body::json())
             .and(with_service(services.clone()))
             .and_then(handler::auth::signup);
 
         let login = auth
             .and(warp::path("login"))
-            .and(warp::get())
             .and(warp::header::<String>("authorization"))
             .and(with_service(services.clone()))
             .and_then(handler::auth::login);
@@ -59,43 +66,42 @@ impl Http {
         let files = api_v1.and(warp::path("files"));
 
         let upload_file = files
-            .and(warp::post())
             .and(with_authorization())
             .and(with_service(services.clone()))
             .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
             .and_then(handler::files::upload);
 
         let download_file = files
-            .and(warp::get())
             .and(with_authorization())
             .and(with_service(services.clone()))
             .and(warp::path::param())
             .and_then(handler::files::download);
 
-        let avatars = api_v1.and(warp::path("avatars"));
-
-        let upload_avatar = avatars
-            .and(warp::post())
-            .and(with_authorization())
-            .and(with_service(services.clone()))
-            .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
-            .and_then(handler::avatars::upload);
-
         let profiles = api_v1.and(warp::path("profiles"));
 
         let create_profile = profiles
-            .and(warp::post())
             .and(with_authorization())
             .and(warp::body::json())
             .and(with_service(services.clone()))
             .and_then(handler::profiles::create);
 
-        let routes =
-            warp::any()
-                .and(signup.or(
-                    login.or(upload_file.or(download_file.or(upload_avatar.or(create_profile)))),
-                ))
-                .with(cors);
+        let upload_avatar = profiles
+            .and(warp::path("avatar"))
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
+            .and_then(handler::profiles::upload_avatar);
+
+        let get_routes = warp::get()
+                .and(login.or(download_file));
+
+        let post_routes = warp::post()
+                .and(signup
+                .or(create_profile)
+                .or(upload_file)
+                .or(upload_avatar));
+
+        let routes = chat.or(get_routes).or(post_routes).with(cors);
         let routes = routes.recover(handler::rejection::handle_rejection);
 
         warp::serve(routes).bind(([127, 0, 0, 1], self.port)).await;

@@ -16,7 +16,7 @@ pub struct AvatarUploadResponse {
     url: String,
 }
 
-pub async fn upload(
+pub async fn upload_avatar(
     claims: Claims,
     services: Services,
     form: FormData,
