@@ -1,10 +1,11 @@
 use futures::{Stream, StreamExt, TryStream, TryStreamExt};
 use futures::future;
-use futures::stream::{SplitStream, SplitSink};
+use futures::stream::SplitStream;
 use std::str::from_utf8;
 use std::time::Duration;
+use tokio::spawn;
 use tokio::sync::broadcast::{channel, Receiver, Sender};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use tokio::sync::mpsc::unbounded_channel;
 use tokio::time::delay_for;
 use uuid::Uuid;
 use warp::ws::WebSocket;
@@ -26,14 +27,33 @@ impl ChatService {
     }
 
     pub async fn register(&self, client_id: Uuid, web_socket: WebSocket) {
-        let rx = self.subscribe().await;
+        let orx = self.subscribe();
         let (sink, stream) = web_socket.split();
-        let (urx, utx) = unbounded_channel::<Parcel>();
+
+        info!("Client({}): Registered", client_id);
 
         let read_process = ChatService::read_into_parcel(client_id, stream)
-            .try_for_each(|parcel| async {
-                // L77
-            })
+            .try_for_each(|p| async {
+                info!("Parcel Received: {:?}", p);
+                self.publish(p); Ok(())
+            });
+
+        let (utx, urx) = unbounded_channel();
+        spawn(urx.forward(sink));
+
+        let write_process = ChatService::write_into_ws_message(client_id, orx.into_stream())
+            .try_for_each(|message| async {
+                info!("Message Sent: {:?}", message);
+                utx.send(Ok(message)).unwrap();
+                Ok(())
+            });
+
+        if let Err(e) = tokio::select! {
+            result = read_process => result,
+            result = write_process => result,
+        } {
+            error!("Client({}): Connection Error! ({})", client_id, e.to_string());
+        }
     }
 
     /// Publishes a `Ping` `Parcel` to use as singal of alive
@@ -41,42 +61,30 @@ impl ChatService {
     pub async fn poll(&self) {
         loop {
             delay_for(Duration::from_secs(5)).await;
-            self.publish(Parcel::ping()).await;
-        }
-    }
-
-    /// Iterates through every `Parcel` sent over a `UnboundedReceiver`
-    /// and handles the `Parcel` for the given case
-    pub async fn attach_rx(&self, rx: UnboundedReceiver<Parcel>) {
-        let ticking_alive = self.poll();
-        let dispatcher = rx.for_each(|p| self.handle(p));
-
-        tokio::select! {
-            _ = ticking_alive => {},
-            _ = dispatcher => {},
+            self.publish(Parcel::ping());
         }
     }
 
     /// Subscribes to the Chat main channel and retrieves
     /// a `Receiver` of the channel to be consumed by the
     /// client in question
-    pub async fn subscribe(&self) -> Receiver<Parcel> {
+    pub fn subscribe(&self) -> Receiver<Parcel> {
         self.channel.subscribe()
     }
 
     /// Publishes a `Parcel` to the Chat main channel
-    pub async fn publish(&self, parcel: Parcel) {
+    pub fn publish(&self, parcel: Parcel) {
         self.channel.send(parcel);
     }
 
     pub async fn handle(&self, parcel: Parcel) {
         match parcel.kind {
-            Kind::Message => self.publish(parcel).await,
+            Kind::Message => self.publish(parcel),
             _ => {},
         }
     }
 
-    async fn read_into_parcel(client_id: Uuid, stream: SplitStream<WebSocket>) -> impl Stream<Item = Result<Parcel>> {
+    pub fn read_into_parcel(client_id: Uuid, stream: SplitStream<WebSocket>) -> impl Stream<Item = Result<Parcel>> {
         stream
             .take_while(|message| {
                 future::ready(if let Ok(message) = message {
@@ -101,7 +109,7 @@ impl ChatService {
         E: std::error::Error,
     {
         stream
-            // .try_filter(move |parcel| future::ready(parcel.client_id.unwrap() == client_id))
+            .try_filter(move |parcel| future::ready(parcel.client_id.unwrap() != client_id))
             .map_ok(|parcel| {
                 let data = serde_json::to_string(&parcel.inner.unwrap()).unwrap();
 

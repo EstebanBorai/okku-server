@@ -1,6 +1,8 @@
+use uuid::Uuid;
 use warp::http;
 use warp::Filter;
 
+use crate::application::service::Claims;
 use crate::application::service::Services;
 use crate::error::Result;
 use crate::infrastructure::database::{get_db_pool, ping};
@@ -44,10 +46,11 @@ impl Http {
 
         let chat = api_v1.and(warp::path("chat"))
             .and(warp::ws())
+            // .and(with_authorization())
             .and(with_service(services.clone()))
             .map(move |ws: warp::ws::Ws, services: Services| {
-                ws.on_upgrade(move |web_socker| async move {
-                    info!("Upgraded");
+                ws.on_upgrade(move |web_socket| async move {
+                    services.chat_service.register(Uuid::new_v4(), web_socket).await;
                 })
             });
 

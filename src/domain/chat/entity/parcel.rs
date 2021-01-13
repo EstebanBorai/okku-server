@@ -1,10 +1,12 @@
 use uuid::Uuid;
 
+#[derive(Debug, Clone)]
 pub enum Kind {
   Message,
   Ping,
 }
 
+#[derive(Debug, Clone)]
 pub struct Parcel {
   pub kind: Kind,
   pub inner: Option<Vec<u8>>,
