@@ -31,7 +31,7 @@ where
         }
 
         self.profile_repository
-            .create(user, first_name, email)
+            .create(user)
             .await
     }
 

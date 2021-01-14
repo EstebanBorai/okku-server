@@ -22,13 +22,11 @@ impl Repository {
 
 #[async_trait]
 impl ProfileRepository for Repository {
-    async fn create(&self, user: &User, first_name: &str, email: &str) -> Result<Profile> {
+    async fn create(&self, user: &User) -> Result<Profile> {
         let dto: ProfileDTO = sqlx::query_as(
-            "INSERT INTO profiles (user_id, first_name, email) VALUES ($1, $2, $3) RETURNING *",
+            "INSERT INTO profiles (user_id) VALUES ($1, $2, $3) RETURNING *",
         )
         .bind(user.id)
-        .bind(first_name)
-        .bind(email)
         .fetch_one(self.db_pool)
         .await?;
 

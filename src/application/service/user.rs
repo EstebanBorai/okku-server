@@ -13,5 +13,5 @@ pub fn make_user_service(
     db_pool: &'static DbPool,
     profile_service: Arc<ProfileService>,
 ) -> UserService {
-    UserService::new(Repository::new(db_pool), profile_service)
+    UserService::new(Repository::new(db_pool, ProfileRepository::new(db_pool)), profile_service)
 }
