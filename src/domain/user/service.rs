@@ -1,25 +1,33 @@
 use regex::Regex;
+use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::domain::profile::{Profile, ProfileRepository, ProfileService};
 use crate::error::{Error, Result};
 
 use super::{User, UserRepository};
 
 const USERNAME_REGEX: &str = r#"^[a-z0-9.]{7,20}$"#;
 
-pub struct UserService<R>
+pub struct UserService<R, S>
 where
     R: UserRepository,
+    S: ProfileRepository,
 {
     user_repository: R,
+    profile_service: Arc<ProfileService<S>>,
 }
 
-impl<R> UserService<R>
+impl<R, S> UserService<R, S>
 where
     R: UserRepository,
+    S: ProfileRepository,
 {
-    pub fn new(user_repository: R) -> Self {
-        Self { user_repository }
+    pub fn new(user_repository: R, profile_service: Arc<ProfileService<S>>) -> Self {
+        Self {
+            user_repository,
+            profile_service,
+        }
     }
 
     pub async fn create(&self, name: &str) -> Result<User> {
@@ -40,5 +48,9 @@ where
 
     pub async fn find_by_name(&self, name: &str) -> Result<User> {
         self.user_repository.find_by_name(name).await
+    }
+
+    pub async fn fetch_profile(&self, id: &Uuid) -> Result<Profile> {
+        self.profile_service.find_by_user_id(id).await
     }
 }

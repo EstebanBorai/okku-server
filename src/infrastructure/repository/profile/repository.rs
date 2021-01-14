@@ -1,8 +1,11 @@
 use async_trait::async_trait;
+use futures::TryStreamExt;
+use sqlx::Row;
+use uuid::Uuid;
 
 use crate::domain::profile::{Profile, ProfileRepository};
 use crate::domain::user::User;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::infrastructure::database::DbPool;
 
 use super::ProfileDTO;
@@ -32,13 +35,39 @@ impl ProfileRepository for Repository {
         Ok(ProfileDTO::into_profile(&dto, user, None))
     }
 
-    async fn find_by_user(&self, user: &User) -> Result<Profile> {
-        let dto: ProfileDTO =
-            sqlx::query_as("SELECT * FROM profiles LEFT JOIN users ON users.name = $1")
-                .bind(&user.name)
-                .fetch_one(self.db_pool)
-                .await?;
+    async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Profile> {
+        let mut rows = sqlx::query(r#"
+            SELECT
+                users.id AS user_id,
+                users.name,
+                profiles.id AS profile_id,
+                profiles.first_name,
+                profiles.email,
+                profiles.surname,
+                profiles.birthday,
+                profiles.bio
+            FROM profiles
+            LEFT JOIN users ON users.id = $1"#)
+            .bind(user_id)
+            .fetch(self.db_pool);
 
-        Ok(ProfileDTO::into_profile(&dto, user, None))
+        if let Some(row) = rows.try_next().await? {
+            return Ok(Profile {
+                id: row.try_get("profile_id")?,
+                user: User {
+                    id: row.try_get("user_id")?,
+                    name: row.try_get("name")?,
+                },
+                first_name: row.try_get("first_name")?,
+                email: row.try_get("email")?,
+                birthday: row.try_get("birthday")?,
+                bio: row.try_get("bio")?,
+                surname: row.try_get("surname")?,
+                avatar: None,
+                contacts: None,
+            });
+        }
+
+        Err(Error::UserNotFound)
     }
 }

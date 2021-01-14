@@ -1,15 +1,12 @@
 use http_auth_basic::AuthBasicError;
 use image::ImageError;
 use sqlx::error::Error as SqlxError;
-use std::string::ToString;
 use std::str::Utf8Error;
+use std::string::ToString;
 use std::time::SystemTimeError;
 use thiserror::Error as ThisError;
-use tokio::sync::broadcast::SendError;
 use url::ParseError as UrlError;
 use warp::reject::Reject;
-
-use crate::domain::chat::Parcel;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -57,6 +54,8 @@ pub enum Error {
     WebSocketWriteMessageError(String),
     #[error("An I/O error ocurred: {0}")]
     IO(String),
+    #[error("Username doesn't exists")]
+    UserNotFound,
 }
 
 impl Reject for Error {}

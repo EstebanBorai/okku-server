@@ -10,8 +10,8 @@ use crate::domain::user::User;
 pub struct ProfileDTO {
     pub id: Uuid,
     pub user_id: Uuid,
-    pub first_name: String,
-    pub email: String,
+    pub first_name: Option<String>,
+    pub email: Option<String>,
     pub avatar_id: Option<Uuid>,
     pub surname: Option<String>,
     pub birthday: Option<DateTime<Utc>>,

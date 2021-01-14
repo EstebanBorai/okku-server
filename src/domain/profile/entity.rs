@@ -9,8 +9,8 @@ use crate::domain::user::User;
 pub struct Profile {
     pub id: Uuid,
     pub user: User,
-    pub first_name: String,
-    pub email: String,
+    pub first_name: Option<String>,
+    pub email: Option<String>,
     pub avatar: Option<Avatar>,
     pub surname: Option<String>,
     pub birthday: Option<DateTime<Utc>>,

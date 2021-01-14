@@ -2,7 +2,6 @@ use uuid::Uuid;
 use warp::http;
 use warp::Filter;
 
-use crate::application::service::Claims;
 use crate::application::service::Services;
 use crate::error::Result;
 use crate::infrastructure::database::{get_db_pool, ping};
@@ -44,13 +43,17 @@ impl Http {
         let api_v1 = api.and(warp::path("v1"));
         let auth = api_v1.and(warp::path("auth"));
 
-        let chat = api_v1.and(warp::path("chat"))
+        let chat = api_v1
+            .and(warp::path("chat"))
             .and(warp::ws())
             // .and(with_authorization())
             .and(with_service(services.clone()))
             .map(move |ws: warp::ws::Ws, services: Services| {
                 ws.on_upgrade(move |web_socket| async move {
-                    services.chat_service.register(Uuid::new_v4(), web_socket).await;
+                    services
+                        .chat_service
+                        .register(Uuid::new_v4(), web_socket)
+                        .await;
                 })
             });
 
@@ -65,6 +68,12 @@ impl Http {
             .and(warp::header::<String>("authorization"))
             .and(with_service(services.clone()))
             .and_then(handler::auth::login);
+
+        let me = auth
+            .and(warp::path("me"))
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and_then(handler::auth::me);
 
         let files = api_v1.and(warp::path("files"));
 
@@ -95,19 +104,17 @@ impl Http {
             .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
             .and_then(handler::profiles::upload_avatar);
 
-        let get_routes = warp::get()
-                .and(login.or(download_file));
+        let get_routes = warp::get().and(login.or(me.or(download_file)));
 
-        let post_routes = warp::post()
-                .and(signup
-                .or(create_profile)
-                .or(upload_file)
-                .or(upload_avatar));
+        let post_routes =
+            warp::post().and(signup.or(create_profile).or(upload_file).or(upload_avatar));
 
-        let routes = chat.or(get_routes).or(post_routes).with(cors);
+        let routes = chat.or(get_routes).or(post_routes);
         let routes = routes.recover(handler::rejection::handle_rejection);
 
-        warp::serve(routes).bind(([127, 0, 0, 1], self.port)).await;
+        warp::serve(routes.with(cors))
+            .bind(([127, 0, 0, 1], self.port))
+            .await;
 
         Ok(())
     }

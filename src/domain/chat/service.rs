@@ -1,7 +1,6 @@
-use futures::{Stream, StreamExt, TryStream, TryStreamExt};
 use futures::future;
 use futures::stream::SplitStream;
-use std::str::from_utf8;
+use futures::{Stream, StreamExt, TryStream, TryStreamExt};
 use std::time::Duration;
 use tokio::spawn;
 use tokio::sync::broadcast::{channel, Receiver, Sender};
@@ -21,27 +20,26 @@ impl ChatService {
     pub fn new() -> Self {
         let (tx, _) = channel(256_usize);
 
-        Self {
-            channel: tx,
-        }
+        Self { channel: tx }
     }
 
     pub async fn register(&self, client_id: Uuid, web_socket: WebSocket) {
-        let orx = self.subscribe();
+        let channel_rx = self.subscribe();
         let (sink, stream) = web_socket.split();
 
         info!("Client({}): Registered", client_id);
 
-        let read_process = ChatService::read_into_parcel(client_id, stream)
-            .try_for_each(|p| async {
+        let read_process =
+            ChatService::read_into_parcel(client_id, stream).try_for_each(|p| async {
                 info!("Parcel Received: {:?}", p);
-                self.publish(p); Ok(())
+                self.publish(p);
+                Ok(())
             });
 
         let (utx, urx) = unbounded_channel();
         spawn(urx.forward(sink));
 
-        let write_process = ChatService::write_into_ws_message(client_id, orx.into_stream())
+        let write_process = ChatService::write_into_ws_message(client_id, channel_rx.into_stream())
             .try_for_each(|message| async {
                 info!("Message Sent: {:?}", message);
                 utx.send(Ok(message)).unwrap();
@@ -52,7 +50,11 @@ impl ChatService {
             result = read_process => result,
             result = write_process => result,
         } {
-            error!("Client({}): Connection Error! ({})", client_id, e.to_string());
+            error!(
+                "Client({}): Connection Error! ({})",
+                client_id,
+                e.to_string()
+            );
         }
     }
 
@@ -80,11 +82,14 @@ impl ChatService {
     pub async fn handle(&self, parcel: Parcel) {
         match parcel.kind {
             Kind::Message => self.publish(parcel),
-            _ => {},
+            _ => {}
         }
     }
 
-    pub fn read_into_parcel(client_id: Uuid, stream: SplitStream<WebSocket>) -> impl Stream<Item = Result<Parcel>> {
+    pub fn read_into_parcel(
+        _: Uuid,
+        stream: SplitStream<WebSocket>,
+    ) -> impl Stream<Item = Result<Parcel>> {
         stream
             .take_while(|message| {
                 future::ready(if let Ok(message) = message {
@@ -96,14 +101,17 @@ impl ChatService {
             .map(move |message| match message {
                 Err(e) => Err(Error::WebSocketReadMessageError(e.to_string())),
                 Ok(message) => {
-                    let input = message.into_bytes();
+                    let parcel: Parcel = serde_json::from_str(message.to_str().unwrap()).unwrap();
 
-                    Ok(Parcel::message(&client_id, &input))
+                    Ok(parcel)
                 }
             })
     }
 
-    pub fn write_into_ws_message<S, E>(client_id: Uuid, stream: S) -> impl Stream<Item = Result<warp::ws::Message>>
+    pub fn write_into_ws_message<S, E>(
+        client_id: Uuid,
+        stream: S,
+    ) -> impl Stream<Item = Result<warp::ws::Message>>
     where
         S: TryStream<Ok = Parcel, Error = E> + Stream<Item = std::result::Result<Parcel, E>>,
         E: std::error::Error,
@@ -111,14 +119,10 @@ impl ChatService {
         stream
             .try_filter(move |parcel| future::ready(parcel.client_id.unwrap() != client_id))
             .map_ok(|parcel| {
-                let data = serde_json::to_string(&parcel.inner.unwrap()).unwrap();
+                let data = serde_json::to_string(&parcel).unwrap();
 
                 warp::ws::Message::text(data)
             })
             .map_err(|e| Error::WebSocketReadMessageError(e.to_string()))
-    }
-
-    fn bytes_as_utf8(&self, bytes: &[u8]) -> Result<String> {
-        from_utf8(bytes).map(|s| s.to_string()).map_err(Error::from)
     }
 }

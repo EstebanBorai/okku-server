@@ -1,32 +1,35 @@
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Kind {
-  Message,
-  Ping,
+    #[serde(rename = "message")]
+    Message,
+    #[serde(rename = "ping")]
+    Ping,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Parcel {
-  pub kind: Kind,
-  pub inner: Option<Vec<u8>>,
-  pub client_id: Option<Uuid>,
+    pub kind: Kind,
+    pub data: Option<Vec<u8>>,
+    pub client_id: Option<Uuid>,
 }
 
 impl Parcel {
-  pub fn ping() -> Self {
-    Self {
-      kind: Kind::Ping,
-      inner: None,
-      client_id: None,
+    pub fn ping() -> Self {
+        Self {
+            kind: Kind::Ping,
+            data: None,
+            client_id: None,
+        }
     }
-  }
 
-  pub fn message(client_id: &Uuid, bytes: &[u8]) -> Self {
-    Self {
-      kind: Kind::Message,
-      inner: Some(bytes.to_vec()),
-      client_id: Some(client_id.to_owned()),
+    pub fn message(client_id: &Uuid, bytes: &[u8]) -> Self {
+        Self {
+            kind: Kind::Message,
+            data: Some(bytes.to_vec()),
+            client_id: Some(client_id.to_owned()),
+        }
     }
-  }
 }
