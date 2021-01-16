@@ -23,18 +23,18 @@ impl Repository {
 #[async_trait]
 impl ProfileRepository for Repository {
     async fn create(&self, user: &User) -> Result<Profile> {
-        let dto: ProfileDTO = sqlx::query_as(
-            "INSERT INTO profiles (user_id) VALUES ($1, $2, $3) RETURNING *",
-        )
-        .bind(user.id)
-        .fetch_one(self.db_pool)
-        .await?;
+        let dto: ProfileDTO =
+            sqlx::query_as("INSERT INTO profiles (user_id) VALUES ($1, $2, $3) RETURNING *")
+                .bind(user.id)
+                .fetch_one(self.db_pool)
+                .await?;
 
         Ok(ProfileDTO::into_profile(&dto, user, None))
     }
 
     async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Profile> {
-        let mut rows = sqlx::query(r#"
+        let mut rows = sqlx::query(
+            r#"
             SELECT
                 users.id AS user_id,
                 users.name,
@@ -45,9 +45,10 @@ impl ProfileRepository for Repository {
                 profiles.birthday,
                 profiles.bio
             FROM profiles
-            LEFT JOIN users ON users.id = $1"#)
-            .bind(user_id)
-            .fetch(self.db_pool);
+            LEFT JOIN users ON users.id = $1"#,
+        )
+        .bind(user_id)
+        .fetch(self.db_pool);
 
         if let Some(row) = rows.try_next().await? {
             return Ok(Profile {

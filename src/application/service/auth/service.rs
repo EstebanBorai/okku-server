@@ -1,4 +1,4 @@
-use jsonwebtoken::{encode, EncodingKey, Header};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -36,6 +36,17 @@ impl AuthService {
         }
 
         Err(Error::InvalidCredentials)
+    }
+
+    pub async fn verify_token(&self, token: &str) -> Result<Claims> {
+        let decode_result = decode::<Claims>(
+            token,
+            &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+            &Validation::default(),
+        )
+        .map_err(|e| Error::JWTError(e.to_string()))?;
+
+        Ok(decode_result.claims)
     }
 
     fn sign_token(&self, user_id: &Uuid) -> Result<String> {

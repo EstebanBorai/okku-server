@@ -1,6 +1,7 @@
 use std::sync::Arc;
+use tokio::sync::broadcast::Sender;
 
-use crate::domain::chat::ChatService;
+use crate::domain::chat::{ChatService, Parcel};
 use crate::infrastructure::database::DbPool;
 
 mod auth;
@@ -31,8 +32,8 @@ pub struct Services {
 }
 
 impl Services {
-    pub fn init(db_pool: &'static DbPool) -> Self {
-        let chat_service = Arc::new(chat::make_chat_service());
+    pub fn init(db_pool: &'static DbPool, chat_tx: Sender<Parcel>) -> Self {
+        let chat_service = Arc::new(chat::make_chat_service(chat_tx));
         let secret_service = Arc::new(secret::make_secret_service(db_pool));
         let file_service = Arc::new(file::make_file_service(db_pool));
         let profile_service = Arc::new(profile::make_profile_service(db_pool));

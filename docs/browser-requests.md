@@ -47,12 +47,25 @@ ws.send(JSON.stringify({
 
 ```javascript
 ws.send(JSON.stringify({
-  type: 'post',
-  payload: {
-    body: 'Hello from msend!'
-  }
+  kind: 'message',
+  data: (new TextEncoder()).encode('Hello World!'),
+  client_id: '335f6d1d-fd0b-4fd2-9009-31be7de90701'
 }));
 ```
+
+<details>
+  <summary>Helper Function to Send Message from Browser Console</summary>
+
+```js
+function sendMessage(receiver, text) {
+  ws.send(JSON.stringify({
+    kind: 'message',
+    data: (new TextEncoder()).encode(text),
+    receiver_id: receiver
+  }))
+}
+```
+</details>
 
 ## Receive Messages
 

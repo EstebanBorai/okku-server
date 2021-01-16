@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::domain::user::{User, UserRepository};
 use crate::domain::profile::ProfileRepository;
+use crate::domain::user::{User, UserRepository};
 use crate::error::Result;
 use crate::infrastructure::database::DbPool;
-use crate::infrastructure::repository::profile::{Repository as ProfileRepositoryInstance};
+use crate::infrastructure::repository::profile::Repository as ProfileRepositoryInstance;
 
 use super::UserDTO;
 
@@ -16,7 +16,10 @@ pub struct Repository {
 
 impl Repository {
     pub fn new(db_pool: &'static DbPool, profile_repository: ProfileRepositoryInstance) -> Self {
-        Self { db_pool, profile_repository }
+        Self {
+            db_pool,
+            profile_repository,
+        }
     }
 }
 

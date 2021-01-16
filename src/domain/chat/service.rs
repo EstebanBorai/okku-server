@@ -3,7 +3,7 @@ use futures::stream::SplitStream;
 use futures::{Stream, StreamExt, TryStream, TryStreamExt};
 use std::time::Duration;
 use tokio::spawn;
-use tokio::sync::broadcast::{channel, Receiver, Sender};
+use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::time::delay_for;
 use uuid::Uuid;
@@ -17,10 +17,18 @@ pub struct ChatService {
 }
 
 impl ChatService {
-    pub fn new() -> Self {
-        let (tx, _) = channel(256_usize);
-
+    pub fn new(tx: Sender<Parcel>) -> Self {
         Self { channel: tx }
+    }
+
+    pub async fn run(&self, rx: Receiver<Parcel>) {
+        let ticking_alive = self.poll();
+        let processing = rx.for_each(|p| self.handle(p.unwrap()));
+
+        tokio::select! {
+            _ = ticking_alive => {},
+            _ = processing => {},
+        }
     }
 
     pub async fn register(&self, client_id: Uuid, web_socket: WebSocket) {
@@ -41,7 +49,6 @@ impl ChatService {
 
         let write_process = ChatService::write_into_ws_message(client_id, channel_rx.into_stream())
             .try_for_each(|message| async {
-                info!("Message Sent: {:?}", message);
                 utx.send(Ok(message)).unwrap();
                 Ok(())
             });
@@ -62,6 +69,7 @@ impl ChatService {
     /// connection
     pub async fn poll(&self) {
         loop {
+            info!("Polling Tick");
             delay_for(Duration::from_secs(5)).await;
             self.publish(Parcel::ping());
         }
@@ -87,7 +95,7 @@ impl ChatService {
     }
 
     pub fn read_into_parcel(
-        _: Uuid,
+        client_id: Uuid,
         stream: SplitStream<WebSocket>,
     ) -> impl Stream<Item = Result<Parcel>> {
         stream
@@ -102,6 +110,7 @@ impl ChatService {
                 Err(e) => Err(Error::WebSocketReadMessageError(e.to_string())),
                 Ok(message) => {
                     let parcel: Parcel = serde_json::from_str(message.to_str().unwrap()).unwrap();
+                    info!("Received(Client: {}): {:?}", client_id, parcel);
 
                     Ok(parcel)
                 }
@@ -117,7 +126,16 @@ impl ChatService {
         E: std::error::Error,
     {
         stream
-            .try_filter(move |parcel| future::ready(parcel.client_id.unwrap() != client_id))
+            .try_filter(move |parcel| match parcel.recipient_id {
+                Some(recipient_id) => {
+                    if recipient_id == client_id {
+                        return future::ready(true);
+                    }
+
+                    future::ready(false)
+                }
+                None => future::ready(true),
+            })
             .map_ok(|parcel| {
                 let data = serde_json::to_string(&parcel).unwrap();
 

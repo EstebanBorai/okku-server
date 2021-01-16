@@ -17,5 +17,5 @@ async fn main() {
 
     let http_server = server::Http::new(3000_u16);
 
-    http_server.serve().await.expect("Failed to run server");
+    http_server.serve().await;
 }

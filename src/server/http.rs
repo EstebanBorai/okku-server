@@ -1,15 +1,24 @@
-use uuid::Uuid;
-use warp::http;
+use serde::{Deserialize, Serialize};
+use tokio::sync::broadcast::channel;
+use warp::http::{self, StatusCode};
 use warp::Filter;
 
 use crate::application::service::Services;
-use crate::error::Result;
+use crate::domain::chat::Parcel;
 use crate::infrastructure::database::{get_db_pool, ping};
+use crate::server::utils::Response;
 
 use super::handler;
 use super::middleware::{with_authorization, with_service};
 
 const MAX_FILE_SIZE: u64 = 1_000_000;
+
+/// Query parameters expected by the `/chat` WebSocket
+/// endpoint
+#[derive(Deserialize, Serialize)]
+struct ChatQueryParams {
+    pub token: String,
+}
 
 pub struct Http {
     pub(crate) port: u16,
@@ -20,11 +29,12 @@ impl Http {
         Self { port }
     }
 
-    pub async fn serve(&self) -> Result<()> {
-        ping().await?;
+    pub async fn serve(&self) {
+        ping().await.expect("Unable to PING Database");
 
         let db_pool = get_db_pool().await;
-        let services = Services::init(db_pool);
+        let (chat_tx, chat_rx) = channel::<Parcel>(256_usize);
+        let services = Services::init(db_pool, chat_tx);
         let cors = warp::cors()
             .allow_any_origin()
             .allow_credentials(true)
@@ -46,16 +56,33 @@ impl Http {
         let chat = api_v1
             .and(warp::path("chat"))
             .and(warp::ws())
-            // .and(with_authorization())
             .and(with_service(services.clone()))
-            .map(move |ws: warp::ws::Ws, services: Services| {
-                ws.on_upgrade(move |web_socket| async move {
-                    services
-                        .chat_service
-                        .register(Uuid::new_v4(), web_socket)
-                        .await;
-                })
-            });
+            .and(warp::query())
+            .map(
+                move |ws: warp::ws::Ws, services: Services, query_params: ChatQueryParams| {
+                    info!("Attempt to register new chat consumer");
+
+                    ws.on_upgrade(move |web_socket| async move {
+                        if let Ok(claims) = services
+                            .auth_service
+                            .verify_token(&query_params.token)
+                            .await
+                        {
+                            info!("User with ID: {} is authenticated to consume chat", claims.user_id);
+                            services
+                                .chat_service
+                                .register(claims.user_id, web_socket)
+                                .await;
+                        } else {
+                            error!("Unable to register consumer due to missing claims or invalid claims provided");
+
+                            Response::message("Invalid token param provided".to_string())
+                                .status_code(StatusCode::FORBIDDEN)
+                                .reject();
+                        }
+                    })
+                },
+            );
 
         let signup = auth
             .and(warp::path("signup"))
@@ -112,10 +139,17 @@ impl Http {
         let routes = chat.or(get_routes).or(post_routes);
         let routes = routes.recover(handler::rejection::handle_rejection);
 
-        warp::serve(routes.with(cors))
-            .bind(([127, 0, 0, 1], self.port))
-            .await;
+        let serving_proccess = warp::serve(routes.with(cors)).bind(([127, 0, 0, 1], self.port));
 
-        Ok(())
+        let chat_service_polling = services.chat_service.run(chat_rx);
+
+        tokio::select! {
+            _ = serving_proccess => {
+                error!("Serving process terminated");
+            },
+            _ = chat_service_polling => {
+                error!("Chat service polling terminated");
+            },
+        }
     }
 }

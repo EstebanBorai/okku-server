@@ -30,9 +30,7 @@ where
             return Err(Error::InvalidEmailAddress(email.to_string()));
         }
 
-        self.profile_repository
-            .create(user)
-            .await
+        self.profile_repository.create(user).await
     }
 
     pub async fn find_by_user_id(&self, id: &Uuid) -> Result<Profile> {
