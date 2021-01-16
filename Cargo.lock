@@ -736,6 +736,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "hoth-server"
+version = "0.6.0"
+dependencies = [
+ "async-trait",
+ "async_once",
+ "bytes",
+ "chrono",
+ "dotenv",
+ "env_logger",
+ "futures",
+ "http-auth-basic",
+ "image",
+ "jsonwebtoken",
+ "lazy_static",
+ "log",
+ "rand 0.7.3",
+ "regex",
+ "rust-argon2",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tree_magic",
+ "url",
+ "uuid",
+ "warp",
+]
+
+[[package]]
 name = "http"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1122,36 +1152,6 @@ checksum = "5a33c1b55807fbed163481b5ba66db4b2fa6cde694a5027be10fb724206c5897"
 dependencies = [
  "socket2",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "msend-server"
-version = "0.6.0"
-dependencies = [
- "async-trait",
- "async_once",
- "bytes",
- "chrono",
- "dotenv",
- "env_logger",
- "futures",
- "http-auth-basic",
- "image",
- "jsonwebtoken",
- "lazy_static",
- "log",
- "rand 0.7.3",
- "regex",
- "rust-argon2",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "tree_magic",
- "url",
- "uuid",
- "warp",
 ]
 
 [[package]]
