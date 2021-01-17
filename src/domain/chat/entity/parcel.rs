@@ -17,6 +17,7 @@ pub struct Parcel {
     pub kind: Kind,
     pub data: Option<Vec<u8>>,
     pub recipient_id: Option<Uuid>,
+    pub sender_id: Option<Uuid>,
 }
 
 impl Parcel {
@@ -25,14 +26,16 @@ impl Parcel {
             kind: Kind::Ping,
             data: Some(Parcel::unix_now().unwrap().to_string().as_bytes().to_vec()),
             recipient_id: None,
+            sender_id: None,
         }
     }
 
-    pub fn message(recipient_id: &Uuid, bytes: &[u8]) -> Self {
+    pub fn message(sender_id: &Uuid, recipient_id: &Uuid, bytes: &[u8]) -> Self {
         Self {
             kind: Kind::Message,
             data: Some(bytes.to_vec()),
             recipient_id: Some(recipient_id.to_owned()),
+            sender_id: Some(sender_id.to_owned()),
         }
     }
 
