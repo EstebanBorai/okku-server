@@ -81,6 +81,10 @@ where
         self.user_repository.find_by_name(name).await
     }
 
+    pub async fn find_by_id(&self, id: &Uuid) -> Result<User> {
+        self.user_repository.find_one(id).await
+    }
+
     pub async fn fetch_profile(&self, id: &Uuid) -> Result<Profile> {
         self.profile_service.find_by_user_id(id).await
     }
