@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   first_name VARCHAR(64),
-  email VARCHAR(256) UNIQUE,
+  email VARCHAR(256) NOT NULL UNIQUE,
   surname VARCHAR(64),
   birthday DATE,
   bio VARCHAR(256),

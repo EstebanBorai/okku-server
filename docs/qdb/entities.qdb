@@ -1,0 +1,39 @@
+## Paste the contents of this file in the
+## text editor available here: https://app.quickdatabasediagrams.com/#/
+
+User
+-
+id PK UUID
+name VARCHAR(40) UNIQUE
+
+Secret
+-
+id PK UUID
+hash VARCHAR(255)
+user_id UUID FK - User.id
+
+File
+-
+id PK UUID
+filename VARCHAR(255) UNIQUE
+mime VARCHAR(128)
+bytes BYTEA
+size INTEGER
+url VARCHAR(255)
+user_id UUID FK - User.id
+
+Avatar
+-
+id PK UUID
+file_id UUID FK - File.id
+
+Profile
+-
+id UUID PK
+first_name VARCHAR(64)
+email VARCHAR(256) UNIQUE
+surname VARCHAR(64)
+birthday DATE
+bio VARCHAR(256)
+user_id UUID FK - User.id
+avatar_id UUID FK - Avatar.id
