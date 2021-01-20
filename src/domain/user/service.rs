@@ -77,10 +77,6 @@ where
         Ok(user)
     }
 
-    pub async fn find_one(&self, id: &Uuid) -> Result<User> {
-        self.user_repository.find_one(id).await
-    }
-
     pub async fn find_by_name(&self, name: &str) -> Result<User> {
         self.user_repository.find_by_name(name).await
     }
