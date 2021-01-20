@@ -7,6 +7,7 @@ use crate::server::utils::Response;
 
 #[derive(Deserialize)]
 pub struct SignupPayload {
+    email: String,
     name: String,
     password: String,
 }
@@ -21,7 +22,11 @@ pub async fn signup(
     body: SignupPayload,
     services: Services,
 ) -> Result<impl warp::Reply, warp::reject::Rejection> {
-    let user = match services.user_service.create(body.name.as_str()).await {
+    let user = match services
+        .user_service
+        .register(&body.name, &body.email, body.password.as_bytes())
+        .await
+    {
         Ok(user) => user,
         Err(e) => {
             return Err(Response::message(e.message())
@@ -29,16 +34,6 @@ pub async fn signup(
                 .reject());
         }
     };
-
-    if let Err(e) = services
-        .secret_service
-        .create(body.password.as_bytes(), &user.id)
-        .await
-    {
-        return Err(Response::message(e.message())
-            .status_code(StatusCode::INTERNAL_SERVER_ERROR)
-            .reject());
-    }
 
     match services
         .auth_service

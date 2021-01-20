@@ -6,15 +6,18 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-use crate::application::service::secret::SecretService;
+use crate::domain::secret::{SecretRepository, SecretService};
 use crate::error::{Error, Result};
 
 lazy_static! {
     static ref JWT_SECRET: String = env::var("JWT_SECRET").unwrap();
 }
 
-pub struct AuthService {
-    secret_service: Arc<SecretService>,
+pub struct AuthService<R>
+where
+    R: SecretRepository,
+{
+    secret_service: Arc<SecretService<R>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -23,8 +26,11 @@ pub struct Claims {
     pub exp: u128,
 }
 
-impl AuthService {
-    pub fn new(secret_service: Arc<SecretService>) -> Self {
+impl<R> AuthService<R>
+where
+    R: SecretRepository,
+{
+    pub fn new(secret_service: Arc<SecretService<R>>) -> Self {
         Self { secret_service }
     }
 
@@ -51,7 +57,7 @@ impl AuthService {
 
     fn sign_token(&self, user_id: &Uuid) -> Result<String> {
         let claims = Claims {
-            user_id: user_id.clone(),
+            user_id: user_id.to_owned(),
             exp: self.unix_now()? + 86400000_u128,
         };
 
@@ -70,8 +76,4 @@ impl AuthService {
 
         Ok(now.as_millis())
     }
-}
-
-pub fn make_auth_service(secret_service: Arc<SecretService>) -> AuthService {
-    AuthService::new(secret_service)
 }

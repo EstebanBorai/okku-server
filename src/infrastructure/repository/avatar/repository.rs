@@ -26,6 +26,6 @@ impl AvatarRepository for Repository {
                 .fetch_one(self.db_pool)
                 .await?;
 
-        Ok(AvatarDTO::into_avatar(&avatar, file))
+        Ok(AvatarDTO::as_avatar(&avatar, file))
     }
 }

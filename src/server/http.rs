@@ -21,7 +21,7 @@ struct ChatQueryParams {
 }
 
 pub struct Http {
-    pub(crate) port: u16,
+    pub port: u16,
 }
 
 impl Http {
@@ -118,12 +118,6 @@ impl Http {
 
         let profiles = api_v1.and(warp::path("profiles"));
 
-        let create_profile = profiles
-            .and(with_authorization())
-            .and(warp::body::json())
-            .and(with_service(services.clone()))
-            .and_then(handler::profiles::create);
-
         let upload_avatar = profiles
             .and(warp::path("avatar"))
             .and(with_authorization())
@@ -133,8 +127,7 @@ impl Http {
 
         let get_routes = warp::get().and(login.or(me.or(download_file)));
 
-        let post_routes =
-            warp::post().and(signup.or(create_profile).or(upload_file).or(upload_avatar));
+        let post_routes = warp::post().and(signup.or(upload_file).or(upload_avatar));
 
         let routes = chat.or(get_routes).or(post_routes);
         let routes = routes.recover(handler::rejection::handle_rejection);

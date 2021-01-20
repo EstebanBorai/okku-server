@@ -5,15 +5,15 @@ use uuid::Uuid;
 
 use crate::error::Result;
 
-use super::Profile;
+use super::Secret;
 
 #[async_trait]
-pub trait ProfileRepository {
-    async fn create_tx<'a>(
-        &'a self,
+pub trait SecretRepository {
+    async fn create_tx(
+        &self,
         tx: &mut Transaction<'static, Postgres>,
         user_id: &Uuid,
-        email: &str,
-    ) -> Result<Profile>;
-    async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Profile>;
+        hash: &str,
+    ) -> Result<Secret>;
+    async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Secret>;
 }

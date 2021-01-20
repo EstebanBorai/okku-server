@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use futures::TryStreamExt;
-use sqlx::Row;
+use sqlx::postgres::Postgres;
+use sqlx::{Row, Transaction};
 use uuid::Uuid;
 
 use crate::domain::profile::{Profile, ProfileRepository};
-use crate::domain::user::User;
 use crate::error::{Error, Result};
 use crate::infrastructure::database::DbPool;
 
@@ -22,14 +22,20 @@ impl Repository {
 
 #[async_trait]
 impl ProfileRepository for Repository {
-    async fn create(&self, user: &User) -> Result<Profile> {
+    async fn create_tx<'a>(
+        &'a self,
+        tx: &mut Transaction<'static, Postgres>,
+        user_id: &Uuid,
+        email: &str,
+    ) -> Result<Profile> {
         let dto: ProfileDTO =
-            sqlx::query_as("INSERT INTO profiles (user_id) VALUES ($1, $2, $3) RETURNING *")
-                .bind(user.id)
-                .fetch_one(self.db_pool)
+            sqlx::query_as("INSERT INTO profiles (user_id, email) VALUES ($1, $2) RETURNING *")
+                .bind(user_id)
+                .bind(email)
+                .fetch_one(tx)
                 .await?;
 
-        Ok(ProfileDTO::into_profile(&dto, user, None))
+        Ok(ProfileDTO::as_profile(&dto, None))
     }
 
     async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Profile> {
@@ -53,10 +59,6 @@ impl ProfileRepository for Repository {
         if let Some(row) = rows.try_next().await? {
             return Ok(Profile {
                 id: row.try_get("profile_id")?,
-                user: User {
-                    id: row.try_get("user_id")?,
-                    name: row.try_get("name")?,
-                },
                 first_name: row.try_get("first_name")?,
                 email: row.try_get("email")?,
                 birthday: row.try_get("birthday")?,

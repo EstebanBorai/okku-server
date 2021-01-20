@@ -30,15 +30,6 @@ impl Parcel {
         }
     }
 
-    pub fn message(sender_id: &Uuid, recipient_id: &Uuid, bytes: &[u8]) -> Self {
-        Self {
-            kind: Kind::Message,
-            data: Some(bytes.to_vec()),
-            recipient_id: Some(recipient_id.to_owned()),
-            sender_id: Some(sender_id.to_owned()),
-        }
-    }
-
     pub fn unix_now() -> Result<u128> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)

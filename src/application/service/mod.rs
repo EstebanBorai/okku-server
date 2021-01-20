@@ -37,7 +37,11 @@ impl Services {
         let secret_service = Arc::new(secret::make_secret_service(db_pool));
         let file_service = Arc::new(file::make_file_service(db_pool));
         let profile_service = Arc::new(profile::make_profile_service(db_pool));
-        let user_service = Arc::new(user::make_user_service(db_pool, profile_service.clone()));
+        let user_service = Arc::new(user::make_user_service(
+            db_pool,
+            profile_service.clone(),
+            secret_service.clone(),
+        ));
         let avatar_service = Arc::new(avatar::make_avatar_service(db_pool, file_service.clone()));
         let auth_service = Arc::new(auth::make_auth_service(secret_service.clone()));
 

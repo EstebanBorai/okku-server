@@ -44,14 +44,10 @@ pub enum Error {
     InvalidEmailAddress(String),
     #[error("Invalid username, username must have between 7 and 20 alphanumeric characters, and only dot (.) is allowed")]
     InvalidUsername(String),
-    #[error("Unable to send Parcel")]
-    SendParcelError(String),
     #[error("Invalid UTF-8 provided, {0}")]
     InvalidUtf8(String),
     #[error("An error ocurred reading a message from the WebSocket: {0}")]
     WebSocketReadMessageError(String),
-    #[error("An error ocurred writing a message to the WebSocket: {0}")]
-    WebSocketWriteMessageError(String),
     #[error("An I/O error ocurred: {0}")]
     IO(String),
     #[error("Username doesn't exists")]

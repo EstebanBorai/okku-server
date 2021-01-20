@@ -1,27 +1,37 @@
 use argon2::{hash_encoded, verify_encoded, Config as Argon2Config};
 use rand::{thread_rng, Rng};
+use sqlx::postgres::Postgres;
+use sqlx::Transaction;
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
-use crate::infrastructure::database::DbPool;
-use crate::infrastructure::repository::secret::Repository;
 
-use super::Secret;
+use super::{Secret, SecretRepository};
 
-pub struct SecretService {
-    secret_repository: Repository,
+pub struct SecretService<R>
+where
+    R: SecretRepository,
+{
+    secret_repository: R,
 }
-
-impl SecretService {
-    pub fn new(secret_repository: Repository) -> Self {
+impl<R> SecretService<R>
+where
+    R: SecretRepository,
+{
+    pub fn new(secret_repository: R) -> Self {
         Self { secret_repository }
     }
 
-    pub async fn create(&self, pwd: &[u8], user_id: &Uuid) -> Result<Secret> {
+    pub async fn create_tx<'a>(
+        &'a self,
+        tx: &mut Transaction<'static, Postgres>,
+        user_id: &Uuid,
+        pwd: &[u8],
+    ) -> Result<Secret> {
         let hash = self.make_hash(pwd)?;
-        let secret = self.secret_repository.create(&hash, user_id).await?;
+        let secret = self.secret_repository.create_tx(tx, user_id, &hash).await?;
 
-        Ok(Secret::from(secret))
+        Ok(secret.into())
     }
 
     pub async fn validate(&self, pwd: &[u8], user_id: &Uuid) -> Result<bool> {
@@ -41,8 +51,4 @@ impl SecretService {
     fn verify_hash(&self, pwd: &[u8], hash: &str) -> bool {
         verify_encoded(hash, pwd).unwrap_or(false)
     }
-}
-
-pub fn make_secret_service(db_pool: &'static DbPool) -> SecretService {
-    SecretService::new(Repository::new(db_pool))
 }

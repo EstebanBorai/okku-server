@@ -3,8 +3,8 @@ use uuid::Uuid;
 use warp::http::StatusCode;
 use warp::reject::Rejection;
 
-use crate::application::service::Claims;
 use crate::application::service::Services;
+use crate::domain::auth::Claims;
 use crate::server::utils::Response;
 
 #[derive(Serialize)]

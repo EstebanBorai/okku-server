@@ -9,9 +9,7 @@ mod server;
 
 #[tokio::main]
 async fn main() {
-    dotenv::dotenv()
-        .ok()
-        .expect("Unable to find .env file. Create one based on the .env.sample");
+    dotenv::dotenv().expect("Unable to find .env file. Create one based on the .env.sample or by executing the bin/dotenv script");
 
     env_logger::init();
 

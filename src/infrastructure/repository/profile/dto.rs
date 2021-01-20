@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use crate::domain::avatar::Avatar;
 use crate::domain::profile::Profile;
-use crate::domain::user::User;
 
 #[derive(Debug, FromRow)]
 pub struct ProfileDTO {
@@ -19,10 +18,9 @@ pub struct ProfileDTO {
 }
 
 impl ProfileDTO {
-    pub fn into_profile(dto: &ProfileDTO, user: &User, avatar: Option<Avatar>) -> Profile {
+    pub fn as_profile(dto: &ProfileDTO, avatar: Option<Avatar>) -> Profile {
         Profile {
             id: dto.id,
-            user: user.clone(),
             first_name: dto.first_name.clone(),
             email: dto.email.clone(),
             avatar,

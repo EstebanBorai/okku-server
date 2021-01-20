@@ -11,10 +11,7 @@ pub struct AvatarDTO {
 }
 
 impl AvatarDTO {
-    pub fn into_avatar(dto: &AvatarDTO, file: File) -> Avatar {
-        Avatar {
-            id: dto.id,
-            file: file,
-        }
+    pub fn as_avatar(dto: &AvatarDTO, file: File) -> Avatar {
+        Avatar { id: dto.id, file }
     }
 }

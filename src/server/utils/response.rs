@@ -86,7 +86,7 @@ impl Response<Vec<u8>> {
 
         *response.status_mut() = StatusCode::OK;
 
-        return response;
+        response
     }
 }
 

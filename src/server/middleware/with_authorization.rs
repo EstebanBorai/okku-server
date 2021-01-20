@@ -5,7 +5,7 @@ use std::env;
 use warp::http::StatusCode;
 use warp::{Filter, Rejection};
 
-use crate::application::service::Claims;
+use crate::domain::auth::Claims;
 use crate::server::utils::Response;
 
 lazy_static! {
@@ -20,7 +20,7 @@ struct ForbiddenError {
 
 pub fn with_authorization() -> impl Filter<Extract = (Claims,), Error = Rejection> + Copy + Clone {
     warp::header::<String>("authorization").and_then(|authorizaton_header: String| async move {
-        let token: Vec<&str> = authorizaton_header.split(" ").into_iter().collect();
+        let token: Vec<&str> = authorizaton_header.split(' ').into_iter().collect();
 
         if token.get(0).is_none() || token.len() != 2 {
             return Err(

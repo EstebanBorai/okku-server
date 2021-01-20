@@ -84,13 +84,12 @@ impl ChatService {
 
     /// Publishes a `Parcel` to the Chat main channel
     pub fn publish(&self, parcel: Parcel) {
-        self.channel.send(parcel);
+        self.channel.send(parcel).expect("Unable to send parcel");
     }
 
     pub async fn handle(&self, parcel: Parcel) {
-        match parcel.kind {
-            Kind::Message => self.publish(parcel),
-            _ => {}
+        if let Kind::Message = parcel.kind {
+            self.publish(parcel)
         }
     }
 

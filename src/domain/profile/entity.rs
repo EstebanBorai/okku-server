@@ -8,7 +8,6 @@ use crate::domain::user::User;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Profile {
     pub id: Uuid,
-    pub user: User,
     pub first_name: Option<String>,
     pub email: Option<String>,
     pub avatar: Option<Avatar>,
