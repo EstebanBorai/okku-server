@@ -30,10 +30,23 @@ file_id UUID FK - File.id
 Profile
 -
 id UUID PK
-first_name VARCHAR(64)
+first_name VARCHAR(64) NULLABLE
 email VARCHAR(256) UNIQUE
-surname VARCHAR(64)
-birthday DATE
-bio VARCHAR(256)
+surname VARCHAR(64) NULLABLE
+birthday DATE NULLABLE
+bio VARCHAR(256) NULLABLE
 user_id UUID FK - User.id
 avatar_id UUID FK - Avatar.id
+
+Chat
+-
+id UUID PK
+
+Message
+-
+id UUID PK
+chat_id UUID FK >- Chat.id
+author_id UUID FK - User.id
+content TEXT
+kind VARCHAR(32)
+file_id UUID NULLABLE FK - File.id
