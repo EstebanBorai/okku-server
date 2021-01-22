@@ -1,7 +1,7 @@
 mod chat;
+mod chats_users;
 mod message;
-mod parcel;
 
 pub use chat::*;
+pub use chats_users::*;
 pub use message::*;
-pub use parcel::*;
