@@ -22,9 +22,10 @@ impl Repository {
 #[async_trait]
 impl ChatRepository for Repository {
     async fn create_chat(&self) -> Result<Chat> {
-        let chat: ChatDTO = sqlx::query_as("INSERT INTO chats (id) VALUES (uuid_generate_v4()) RETURNING *")
-            .fetch_one(self.db_pool)
-            .await?;
+        let chat: ChatDTO =
+            sqlx::query_as("INSERT INTO chats (id) VALUES (uuid_generate_v4()) RETURNING *")
+                .fetch_one(self.db_pool)
+                .await?;
 
         Ok(ChatDTO::as_chat(&chat))
     }
@@ -84,13 +85,15 @@ impl ChatRepository for Repository {
     }
 
     async fn append_user_to_chat(&self, chat_id: &Uuid, user_id: &Uuid) -> Result<Uuid> {
-        let mut rows = sqlx::query(r#"INSERT INTO chats_users (
+        let mut rows = sqlx::query(
+            r#"INSERT INTO chats_users (
                 chat_id,
                 user_id
             ) VALUES (
                 $1,
                 $2
-            ) RETURNING *"#)
+            ) RETURNING *"#,
+        )
         .bind(chat_id)
         .bind(user_id)
         .fetch(self.db_pool);

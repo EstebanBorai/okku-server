@@ -2,11 +2,13 @@ use futures::future;
 use futures::stream::SplitStream;
 use futures::{Stream, StreamExt, TryStream, TryStreamExt};
 use serde_json::from_str as from_json_str;
+use std::collections::HashMap;
 use std::str::from_utf8;
 use std::time::Duration;
 use tokio::spawn;
 use tokio::sync::broadcast::{Receiver, Sender};
 use tokio::sync::mpsc::unbounded_channel;
+use tokio::sync::RwLock;
 use tokio::time::delay_for;
 use uuid::Uuid;
 use warp::ws::WebSocket;
@@ -24,6 +26,7 @@ where
 {
     channel: Sender<Parcel>,
     chat_repository: R,
+    chats: RwLock<HashMap<Uuid, Vec<Uuid>>>,
 }
 
 impl<R> ChatService<R>
@@ -34,6 +37,7 @@ where
         Self {
             channel: tx,
             chat_repository,
+            chats: RwLock::new(HashMap::new()),
         }
     }
 
@@ -49,16 +53,20 @@ where
         }
     }
 
-    /// Registers a WebSocket into the chat along with the `client_id`.
+    /// Registers a WebSocket into the chat along with the `user_id`.
     /// WebSocket's `Sink` and `Stream` are retrieved in order to forward
     /// and retrieve messages
-    pub async fn register(&self, client_id: Uuid, web_socket: WebSocket) {
+    pub async fn register(&self, user_id: Uuid, web_socket: WebSocket) {
         let channel_rx = self.subscribe();
         let (sink, stream) = web_socket.split();
+        let user_chats = self.retrieve_user_chats(&user_id).await.unwrap();
+        let user_chats: Vec<Uuid> = user_chats.iter().map(|c| c.id).collect();
 
-        info!("Client({}): Registered", client_id);
+        self.chats.write().await.insert(user_id, user_chats.clone());
 
-        let read_process = ChatService::<Repository>::read_into_parcel(client_id, stream)
+        info!("User({}): Registered", user_id);
+
+        let read_process = ChatService::<Repository>::read_into_parcel(user_id, stream)
             .try_for_each(|p| async {
                 info!("Parcel Received: {:?}", p);
                 self.publish(p);
@@ -68,22 +76,36 @@ where
         let (utx, urx) = unbounded_channel();
         spawn(urx.forward(sink));
 
-        let write_process =
-            ChatService::<Repository>::write_into_ws_message(client_id, channel_rx.into_stream())
-                .try_for_each(|message| async {
-                    utx.send(Ok(message)).unwrap();
-                    Ok(())
-                });
+        let write_process = ChatService::<Repository>::write_into_ws_message(
+            channel_rx
+                .filter(|streamee| {
+                    if let Ok(parcel) = streamee {
+                        return match parcel.chat_id {
+                            Some(parcel_chat_id) => {
+                                if user_chats.iter().any(|cid| *cid == parcel_chat_id) {
+                                    return future::ready(true);
+                                }
+
+                                future::ready(false)
+                            }
+                            None => future::ready(true),
+                        };
+                    }
+
+                    future::ready(false)
+                })
+                .into_stream(),
+        )
+        .try_for_each(|message| async {
+            utx.send(Ok(message)).unwrap();
+            Ok(())
+        });
 
         if let Err(e) = tokio::select! {
             result = read_process => result,
             result = write_process => result,
         } {
-            error!(
-                "Client({}): Connection Error! ({})",
-                client_id,
-                e.to_string()
-            );
+            error!("User({}): Connection Error! ({})", user_id, e.to_string());
         }
     }
 
@@ -117,8 +139,9 @@ where
                     let message_json = from_utf8(message_as_bytes.as_slice()).unwrap();
                     let message: IncomingMessageDTO = from_json_str(message_json).unwrap();
 
+                    info!("Im storing!");
                     self.store_message(&message).await.unwrap();
-                    self.publish(parcel)
+                    // self.publish(parcel)
                 }
 
                 return;
@@ -183,25 +206,12 @@ where
             })
     }
 
-    pub fn write_into_ws_message<S, E>(
-        client_id: Uuid,
-        stream: S,
-    ) -> impl Stream<Item = Result<warp::ws::Message>>
+    pub fn write_into_ws_message<S, E>(stream: S) -> impl Stream<Item = Result<warp::ws::Message>>
     where
         S: TryStream<Ok = Parcel, Error = E> + Stream<Item = std::result::Result<Parcel, E>>,
         E: std::error::Error,
     {
         stream
-            .try_filter(move |parcel| match parcel.recipient_id {
-                Some(recipient_id) => {
-                    if recipient_id == client_id {
-                        return future::ready(true);
-                    }
-
-                    future::ready(false)
-                }
-                None => future::ready(true),
-            })
             .map_ok(|parcel| {
                 let data = serde_json::to_string(&parcel).unwrap();
 

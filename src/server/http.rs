@@ -147,7 +147,7 @@ impl Http {
             login.or(me
                 .or(download_file)
                 .or(retrieve_chat_history)
-                .or(retrieve_user_chats))
+                .or(retrieve_user_chats)),
         );
         let post_routes =
             warp::post().and(signup.or(upload_file).or(upload_avatar).or(create_chat));
