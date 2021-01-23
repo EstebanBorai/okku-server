@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::broadcast::Sender;
 
-use crate::domain::chat::{ChatService, Parcel};
+use crate::domain::chat::Parcel;
 use crate::infrastructure::database::DbPool;
 
 mod auth;
@@ -22,7 +22,7 @@ pub use user::*;
 
 #[derive(Clone)]
 pub struct Services {
-    pub chat_service: Arc<ChatService>,
+    pub chat_service: Arc<chat::ChatService>,
     pub avatar_service: Arc<avatar::AvatarService>,
     pub user_service: Arc<user::UserService>,
     pub secret_service: Arc<secret::SecretService>,
@@ -33,7 +33,7 @@ pub struct Services {
 
 impl Services {
     pub fn init(db_pool: &'static DbPool, chat_tx: Sender<Parcel>) -> Self {
-        let chat_service = Arc::new(chat::make_chat_service(chat_tx));
+        let chat_service = Arc::new(chat::make_chat_service(db_pool, chat_tx));
         let secret_service = Arc::new(secret::make_secret_service(db_pool));
         let file_service = Arc::new(file::make_file_service(db_pool));
         let profile_service = Arc::new(profile::make_profile_service(db_pool));

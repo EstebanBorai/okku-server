@@ -1,6 +1,8 @@
 use futures::future;
 use futures::stream::SplitStream;
 use futures::{Stream, StreamExt, TryStream, TryStreamExt};
+use serde_json::from_str as from_json_str;
+use std::str::from_utf8;
 use std::time::Duration;
 use tokio::spawn;
 use tokio::sync::broadcast::{Receiver, Sender};
@@ -9,18 +11,34 @@ use tokio::time::delay_for;
 use uuid::Uuid;
 use warp::ws::WebSocket;
 
-use crate::domain::chat::{Kind, Parcel};
+use crate::domain::chat::{Chat, IncomingMessageDTO, Kind, Parcel};
+use crate::domain::user::User;
 use crate::error::{Error, Result};
+use crate::infrastructure::repository::chat::Repository;
 
-pub struct ChatService {
+use super::{ChatRepository, HistoryMessageDTO};
+
+pub struct ChatService<R>
+where
+    R: ChatRepository,
+{
     channel: Sender<Parcel>,
+    chat_repository: R,
 }
 
-impl ChatService {
-    pub fn new(tx: Sender<Parcel>) -> Self {
-        Self { channel: tx }
+impl<R> ChatService<R>
+where
+    R: ChatRepository,
+{
+    pub fn new(tx: Sender<Parcel>, chat_repository: R) -> Self {
+        Self {
+            channel: tx,
+            chat_repository,
+        }
     }
 
+    /// Initializes polling and handles every incoming message
+    /// from the `Receiver` provider
     pub async fn run(&self, rx: Receiver<Parcel>) {
         let ticking_alive = self.poll();
         let processing = rx.for_each(|p| self.handle(p.unwrap()));
@@ -31,14 +49,17 @@ impl ChatService {
         }
     }
 
+    /// Registers a WebSocket into the chat along with the `client_id`.
+    /// WebSocket's `Sink` and `Stream` are retrieved in order to forward
+    /// and retrieve messages
     pub async fn register(&self, client_id: Uuid, web_socket: WebSocket) {
         let channel_rx = self.subscribe();
         let (sink, stream) = web_socket.split();
 
         info!("Client({}): Registered", client_id);
 
-        let read_process =
-            ChatService::read_into_parcel(client_id, stream).try_for_each(|p| async {
+        let read_process = ChatService::<Repository>::read_into_parcel(client_id, stream)
+            .try_for_each(|p| async {
                 info!("Parcel Received: {:?}", p);
                 self.publish(p);
                 Ok(())
@@ -47,11 +68,12 @@ impl ChatService {
         let (utx, urx) = unbounded_channel();
         spawn(urx.forward(sink));
 
-        let write_process = ChatService::write_into_ws_message(client_id, channel_rx.into_stream())
-            .try_for_each(|message| async {
-                utx.send(Ok(message)).unwrap();
-                Ok(())
-            });
+        let write_process =
+            ChatService::<Repository>::write_into_ws_message(client_id, channel_rx.into_stream())
+                .try_for_each(|message| async {
+                    utx.send(Ok(message)).unwrap();
+                    Ok(())
+                });
 
         if let Err(e) = tokio::select! {
             result = read_process => result,
@@ -88,9 +110,54 @@ impl ChatService {
     }
 
     pub async fn handle(&self, parcel: Parcel) {
-        if let Kind::Message = parcel.kind {
-            self.publish(parcel)
+        match parcel.kind {
+            Kind::Message => {
+                let data = parcel.data.clone();
+                if let Some(message_as_bytes) = data {
+                    let message_json = from_utf8(message_as_bytes.as_slice()).unwrap();
+                    let message: IncomingMessageDTO = from_json_str(message_json).unwrap();
+
+                    self.store_message(&message).await.unwrap();
+                    self.publish(parcel)
+                }
+
+                return;
+            }
+            Kind::Ping => {}
         }
+    }
+
+    pub async fn store_message(&self, incoming_message: &IncomingMessageDTO) -> Result<()> {
+        self.chat_repository
+            .append_to_chat_history(incoming_message)
+            .await
+    }
+
+    pub async fn create_chat(&self, participants: Vec<User>) -> Result<Chat> {
+        let chat = self.chat_repository.create_chat().await?;
+
+        for participant in participants.iter() {
+            match self
+                .chat_repository
+                .append_user_to_chat(&chat.id, &participant.id)
+                .await
+            {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("{}", e.to_string());
+                }
+            }
+        }
+
+        Ok(chat)
+    }
+
+    pub async fn retrieve_user_chats(&self, user_id: &Uuid) -> Result<Vec<Chat>> {
+        self.chat_repository.fetch_user_chats(user_id).await
+    }
+
+    pub async fn retrieve_chat_history(&self, chat_id: &Uuid) -> Result<Vec<HistoryMessageDTO>> {
+        self.chat_repository.retrieve_chat_history(chat_id).await
     }
 
     pub fn read_into_parcel(

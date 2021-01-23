@@ -18,6 +18,7 @@ pub struct Parcel {
     pub data: Option<Vec<u8>>,
     pub recipient_id: Option<Uuid>,
     pub sender_id: Option<Uuid>,
+    pub chat_id: Option<Uuid>,
 }
 
 impl Parcel {
@@ -27,6 +28,7 @@ impl Parcel {
             data: Some(Parcel::unix_now().unwrap().to_string().as_bytes().to_vec()),
             recipient_id: None,
             sender_id: None,
+            chat_id: None,
         }
     }
 

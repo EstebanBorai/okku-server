@@ -15,6 +15,6 @@ pub struct ChatsUsersDTO {
 
 impl ChatsUsersDTO {
     pub fn as_chat(dto: &ChatsUsersDTO) -> Chat {
-        Chat { id: dto.id }
+        Chat { id: dto.chat_id }
     }
 }

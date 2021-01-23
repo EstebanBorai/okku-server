@@ -6,6 +6,7 @@ use std::string::ToString;
 use std::time::SystemTimeError;
 use thiserror::Error as ThisError;
 use url::ParseError as UrlError;
+use uuid::Uuid;
 use warp::reject::Reject;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -52,6 +53,12 @@ pub enum Error {
     IO(String),
     #[error("Username doesn't exists")]
     UserNotFound,
+    #[error("JSON Parsing Error, {0}")]
+    JsonParsingError(String),
+    #[error("Invalid message kind provided, {0}")]
+    ParseMessageKindError(String),
+    #[error("Unable to relate Chat: {0} with User: {1}")]
+    RelateChatWithUserError(Uuid, Uuid),
 }
 
 impl Reject for Error {}
@@ -100,7 +107,13 @@ impl From<Utf8Error> for Error {
 }
 
 impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Self {
-        Error::IO(err.to_string())
+    fn from(e: std::io::Error) -> Self {
+        Error::IO(e.to_string())
+    }
+}
+
+impl From<serde_json::error::Error> for Error {
+    fn from(e: serde_json::error::Error) -> Self {
+        Error::JsonParsingError(e.to_string())
     }
 }

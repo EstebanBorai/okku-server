@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 use sqlx::FromRow;
 use uuid::Uuid;
 
-#[derive(Debug, FromRow)]
-pub struct MessageDTO {
+#[derive(Debug, FromRow, Serialize)]
+pub struct HistoryMessageDTO {
     pub id: Uuid,
     pub content: String,
     pub kind: String,
