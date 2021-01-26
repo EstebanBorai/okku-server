@@ -1,5 +1,3 @@
-mod history_message;
-mod incoming_message;
+mod input_proto_message;
 
-pub use history_message::*;
-pub use incoming_message::*;
+pub use input_proto_message::*;
