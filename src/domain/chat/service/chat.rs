@@ -31,26 +31,44 @@ impl ChatService {
         self.chats.write().await.insert(chat.id, chat);
     }
 
-    pub async fn validate_incoming_message(
+    pub async fn handle_incoming_message(
         &self,
         incoming_message: InputProtoMessageDTO,
     ) -> Result<Message, ()> {
+        let (chat, incoming_message) = self.validate_incoming_message(incoming_message).await?;
+
+        self.store_message(chat, incoming_message).await
+    }
+
+    async fn store_message(
+        &self,
+        chat: Chat,
+        incoming_message: InputProtoMessageDTO,
+    ) -> Result<Message, ()> {
+        // Store message into the database
+        Ok(Message {
+            id: Uuid::new_v4(),
+            author: User {
+                id: incoming_message.author_id,
+                name: String::from("fetch_this_from_database"),
+            },
+            chat: chat.to_owned(),
+            body: incoming_message.body,
+            created_at: incoming_message.created_at,
+        })
+    }
+
+    async fn validate_incoming_message(
+        &self,
+        incoming_message: InputProtoMessageDTO,
+    ) -> Result<(Chat, InputProtoMessageDTO), ()> {
         if let Some(chat) = self.chats.read().await.get(&incoming_message.chat_id) {
             if chat
                 .participants_ids
                 .iter()
                 .any(|participant_id| *participant_id == incoming_message.author_id)
             {
-                return Ok(Message {
-                    id: Uuid::new_v4(),
-                    author: User {
-                        id: incoming_message.author_id,
-                        name: String::from("fetch_this_from_database"),
-                    },
-                    chat: chat.to_owned(),
-                    body: incoming_message.body,
-                    created_at: incoming_message.created_at,
-                });
+                return Ok((chat.to_owned(), incoming_message));
             }
 
             return Err(());

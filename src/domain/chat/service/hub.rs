@@ -92,7 +92,7 @@ impl HubService {
         info!("Received input message: {:?}", incoming_message);
         if let Ok(message) = self
             .chat_service
-            .validate_incoming_message(incoming_message.message)
+            .handle_incoming_message(incoming_message.message)
             .await
         {
             self.publish_to_chat(message).await;
@@ -118,24 +118,19 @@ impl HubService {
     /// Sends an `Proto<Output>` which wraps a `Message` through the
     /// Hub's main `channel` filtering the Author of the message
     pub async fn publish_to_chat(&self, message: Message) {
-        match self.chat_service.find_chat(&message.chat.id).await {
-            Ok(chat) => {
-                let message_author_id = message.author.id.clone();
+        let chat = message.chat.clone();
+        let message_author_id = message.author.id.clone();
 
-                if self.output_tx.receiver_count() > 0 {
-                    for participant_id in chat.participants_ids.iter() {
-                        if *participant_id != message_author_id {
-                            self.output_tx.send(Proto::new_output(
-                                Parcel::Message(message.clone()),
-                                participant_id.clone(),
-                            ));
-                        }
-                    }
+        if self.output_tx.receiver_count() > 0 {
+            for participant_id in chat.participants_ids.iter() {
+                if *participant_id != message_author_id {
+                    self.output_tx
+                        .send(Proto::new_output(
+                            Parcel::Message(message.clone()),
+                            participant_id.clone(),
+                        ))
+                        .unwrap();
                 }
-            }
-            Err(_) => {
-                error!("Do something with this error!");
-                todo!();
             }
         }
     }
