@@ -52,55 +52,6 @@ impl Http {
         let api = warp::path("api");
         let api_v1 = api.and(warp::path("v1"));
         let auth = api_v1.and(warp::path("auth"));
-        let chat = api_v1.and(warp::path("chat"));
-
-        let chat_ws = chat
-            .and(warp::ws())
-            .and(with_service(services.clone()))
-            .and(warp::query())
-            .map(
-                move |ws: warp::ws::Ws, services: Services, query_params: ChatQueryParams| {
-                    info!("Attempt to register new chat consumer");
-
-                    ws.on_upgrade(move |web_socket| async move {
-                        if let Ok(claims) = services
-                            .auth_service
-                            .verify_token(&query_params.token)
-                            .await
-                        {
-                            info!("User with ID: {} is authenticated to consume chat", claims.user_id);
-                            services
-                                .chat_service
-                                .register(claims.user_id, web_socket)
-                                .await;
-                        } else {
-                            error!("Unable to register consumer due to missing claims or invalid claims provided");
-
-                            Response::message("Invalid token param provided".to_string())
-                                .status_code(StatusCode::FORBIDDEN)
-                                .reject();
-                        }
-                    })
-                },
-            );
-
-        let create_chat = chat
-            .and(with_authorization())
-            .and(with_service(services.clone()))
-            .and(warp::body::json())
-            .and_then(handler::chat::create);
-
-        let retrieve_user_chats = chat
-            .and(with_authorization())
-            .and(with_service(services.clone()))
-            .and_then(handler::chat::retrieve_user_chats);
-
-        let retrieve_chat_history = chat
-            .and(warp::path("history"))
-            .and(with_authorization())
-            .and(with_service(services.clone()))
-            .and(warp::path::param())
-            .and_then(handler::chat::retrieve_chat_history);
 
         let signup = auth
             .and(warp::path("signup"))
@@ -143,26 +94,10 @@ impl Http {
             .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
             .and_then(handler::profiles::upload_avatar);
 
-        let get_routes = warp::get().and(
-            login.or(me
-                .or(download_file)
-                .or(retrieve_chat_history)
-                .or(retrieve_user_chats)),
-        );
-        let post_routes =
-            warp::post().and(signup.or(upload_file).or(upload_avatar).or(create_chat));
-        let routes = chat_ws.or(get_routes).or(post_routes);
+        let get_routes = warp::get().and(login.or(me.or(download_file)));
+        let post_routes = warp::post().and(signup.or(upload_file).or(upload_avatar));
+        let routes = get_routes.or(post_routes);
         let routes = routes.recover(handler::rejection::handle_rejection);
         let serving_proccess = warp::serve(routes.with(cors)).bind(([127, 0, 0, 1], self.port));
-        let chat_service_polling = services.chat_service.run(chat_rx);
-
-        tokio::select! {
-            _ = serving_proccess => {
-                error!("Serving process terminated");
-            },
-            _ = chat_service_polling => {
-                error!("Chat service polling terminated");
-            },
-        }
     }
 }

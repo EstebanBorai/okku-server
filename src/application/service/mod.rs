@@ -6,7 +6,6 @@ use crate::infrastructure::database::DbPool;
 
 mod auth;
 mod avatar;
-mod chat;
 mod file;
 mod profile;
 mod secret;
@@ -14,7 +13,6 @@ mod user;
 
 pub use auth::*;
 pub use avatar::*;
-pub use chat::*;
 pub use file::*;
 pub use profile::*;
 pub use secret::*;
@@ -22,7 +20,6 @@ pub use user::*;
 
 #[derive(Clone)]
 pub struct Services {
-    pub chat_service: Arc<chat::ChatService>,
     pub avatar_service: Arc<avatar::AvatarService>,
     pub user_service: Arc<user::UserService>,
     pub secret_service: Arc<secret::SecretService>,
@@ -33,7 +30,6 @@ pub struct Services {
 
 impl Services {
     pub fn init(db_pool: &'static DbPool, chat_tx: Sender<Parcel>) -> Self {
-        let chat_service = Arc::new(chat::make_chat_service(db_pool, chat_tx));
         let secret_service = Arc::new(secret::make_secret_service(db_pool));
         let file_service = Arc::new(file::make_file_service(db_pool));
         let profile_service = Arc::new(profile::make_profile_service(db_pool));
@@ -46,7 +42,6 @@ impl Services {
         let auth_service = Arc::new(auth::make_auth_service(secret_service.clone()));
 
         Self {
-            chat_service,
             avatar_service,
             user_service,
             secret_service,
