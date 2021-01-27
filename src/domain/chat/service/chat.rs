@@ -12,11 +12,11 @@ use crate::domain::chat::dto::InputProtoMessageDTO;
 use crate::domain::chat::entity::{Chat, IncomingMessage, Input, Message, Output, Proto};
 use crate::domain::user::User;
 
-pub struct ChatService {
+pub struct ChatProvider {
     chats: RwLock<HashMap<Uuid, Chat>>,
 }
 
-impl Default for ChatService {
+impl Default for ChatProvider {
     fn default() -> Self {
         Self {
             chats: RwLock::new(HashMap::new()),
@@ -24,11 +24,17 @@ impl Default for ChatService {
     }
 }
 
-impl ChatService {
-    pub async fn create_chat(&self, participants_ids: Vec<Uuid>) {
+impl ChatProvider {
+    pub async fn create_chat(&self, participants_ids: Vec<Uuid>) -> Result<Chat, ()> {
+        if participants_ids.len() < 2 {
+            return Err(());
+        }
+
         let chat = Chat::new_with_participants(participants_ids);
 
-        self.chats.write().await.insert(chat.id, chat);
+        self.chats.write().await.insert(chat.id, chat.clone());
+
+        Ok(chat)
     }
 
     pub async fn handle_incoming_message(

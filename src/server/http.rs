@@ -51,7 +51,12 @@ impl Http {
 
         let api = warp::path("api");
         let api_v1 = api.and(warp::path("v1"));
+
+        // API V1 Filters
         let auth = api_v1.and(warp::path("auth"));
+        let chats = api_v1.and(warp::path("chats"));
+        let files = api_v1.and(warp::path("files"));
+        let profiles = api_v1.and(warp::path("profiles"));
 
         let signup = auth
             .and(warp::path("signup"))
@@ -71,8 +76,6 @@ impl Http {
             .and(with_service(services.clone()))
             .and_then(handler::auth::me);
 
-        let files = api_v1.and(warp::path("files"));
-
         let upload_file = files
             .and(with_authorization())
             .and(with_service(services.clone()))
@@ -85,8 +88,6 @@ impl Http {
             .and(warp::path::param())
             .and_then(handler::files::download);
 
-        let profiles = api_v1.and(warp::path("profiles"));
-
         let upload_avatar = profiles
             .and(warp::path("avatar"))
             .and(with_authorization())
@@ -94,8 +95,15 @@ impl Http {
             .and(warp::multipart::form().max_length(MAX_FILE_SIZE))
             .and_then(handler::profiles::upload_avatar);
 
+        let create_chat = chats
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::body::json())
+            .and_then(handler::chats::create_chat);
+
         let get_routes = warp::get().and(login.or(me.or(download_file)));
-        let post_routes = warp::post().and(signup.or(upload_file).or(upload_avatar));
+        let post_routes =
+            warp::post().and(signup.or(upload_file).or(upload_avatar).or(create_chat));
         let routes = get_routes.or(post_routes);
         let routes = routes.recover(handler::rejection::handle_rejection);
         let serving_proccess = warp::serve(routes.with(cors)).bind(([127, 0, 0, 1], self.port));

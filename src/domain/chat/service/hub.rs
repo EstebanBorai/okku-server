@@ -10,12 +10,12 @@ use warp::ws::WebSocket;
 use crate::domain::chat::entity::{IncomingMessage, Input, Message, Output, Parcel, Proto};
 use crate::domain::user::User;
 
-use super::ChatService;
+use super::chat::ChatProvider;
 
 pub struct HubService {
     pub output_tx: Sender<Proto<Output>>,
+    pub chat_provider: ChatProvider,
     users: Vec<User>,
-    chat_service: ChatService,
 }
 
 impl Default for HubService {
@@ -25,7 +25,7 @@ impl Default for HubService {
         Self {
             output_tx,
             users: Vec::new(),
-            chat_service: ChatService::default(),
+            chat_provider: ChatProvider::default(),
         }
     }
 }
@@ -91,7 +91,7 @@ impl HubService {
     pub async fn handle_input_message(&self, incoming_message: IncomingMessage) {
         info!("Received input message: {:?}", incoming_message);
         if let Ok(message) = self
-            .chat_service
+            .chat_provider
             .handle_incoming_message(incoming_message.message)
             .await
         {
