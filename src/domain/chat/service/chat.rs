@@ -9,7 +9,7 @@ use tokio::time::delay_for;
 use uuid::Uuid;
 
 use crate::domain::chat::dto::InputProtoMessageDTO;
-use crate::domain::chat::entity::{Chat, IncomingMessage, Input, Message, Output, Proto};
+use crate::domain::chat::entity::{Chat, Input, Message, Output, Proto};
 use crate::domain::chat::ChatRepository;
 use crate::domain::user::User;
 use crate::error::{Error, Result};

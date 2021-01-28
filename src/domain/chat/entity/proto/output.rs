@@ -23,7 +23,7 @@ pub enum Parcel {
     LocalMessage(Message),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Output {
     pub parcel: Parcel,
 }

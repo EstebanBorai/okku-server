@@ -10,10 +10,10 @@ use crate::error::{Error, Result};
 /// A chat client which usually represents an
 /// `User` but mostly represents any client which
 /// is capable of send and receive messages
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Client {
-    user_id: Uuid,
-    user_name: String,
+    pub user_id: Uuid,
+    pub user_name: String,
 }
 
 impl From<User> for Client {
@@ -29,7 +29,7 @@ impl Client {
     pub fn read_input(
         &self,
         stream: SplitStream<WebSocket>,
-    ) -> impl Stream<Item = Result<Proto<Output>>> {
+    ) -> impl Stream<Item = Result<Proto<Input>>> {
         let user_id = self.user_id;
 
         stream
@@ -47,10 +47,7 @@ impl Client {
                         serde_json::from_str(message.to_str().unwrap()).unwrap();
                     info!("Received: {:?}", input);
 
-                    Ok(Proto::new_output(Parcel::ForeignMessage(
-                        user_id,
-                        input.inner.0,
-                    )))
+                    Ok(input)
                 }
             })
     }

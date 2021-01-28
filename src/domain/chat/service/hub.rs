@@ -1,17 +1,17 @@
-use futures::StreamExt;
+use futures::{StreamExt, TryStreamExt};
 use std::default::Default;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast::{channel, Receiver, Sender};
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::time::delay_for;
 use uuid::Uuid;
 use warp::ws::WebSocket;
 
 use crate::application::service::UserService;
-use crate::domain::chat::entity::{Input, Message, Output, Parcel, Proto};
+use crate::domain::chat::dto::InputProtoMessageDTO;
+use crate::domain::chat::entity::{Client, Input, Message, Output, Parcel, Proto};
 use crate::domain::chat::ChatRepository;
-use crate::domain::user::User;
 use crate::error::Result;
 
 use super::chat::ChatProvider;
@@ -20,7 +20,7 @@ pub struct HubService {
     pub output_tx: Sender<Proto<Output>>,
     pub chat_provider: ChatProvider,
     pub user_service: Arc<UserService>,
-    users: Vec<User>,
+    clients: Vec<Client>,
 }
 
 impl HubService {
@@ -29,7 +29,7 @@ impl HubService {
 
         Self {
             output_tx,
-            users: Vec::new(),
+            clients: Vec::new(),
             chat_provider: ChatProvider::new(chat_repository),
             user_service,
         }
@@ -37,17 +37,52 @@ impl HubService {
 
     /// Registers a new client (User) to the `Hub` and forwards messages
     /// from the Hub's main channel to the client's WebSocket sink.
-    pub async fn register(&self, user_id: &Uuid, web_socket: WebSocket) -> Result<()> {
+    pub async fn register_and_listen(
+        &self,
+        user_id: &Uuid,
+        web_socket: WebSocket,
+        input_tx: UnboundedSender<Proto<Input>>,
+    ) -> Result<()> {
         let output_rx = self.subscribe();
         let (sink, stream) = web_socket.split();
         let user = self.user_service.find_by_id(user_id).await?;
+        let client = Client::from(user.clone());
 
-        todo!()
+        info!("Registered: {:?}", client);
+
+        let read_process = client.read_input(stream).try_for_each(|proto| async {
+            input_tx.send(proto).unwrap();
+            Ok(())
+        });
+
+        let (client_output_tx, client_output_rx) = unbounded_channel();
+
+        tokio::spawn(client_output_rx.forward(sink));
+
+        let write_process =
+            client
+                .write_output(output_rx.into_stream())
+                .try_for_each(|proto| async {
+                    client_output_tx.send(Ok(proto)).unwrap();
+                    Ok(())
+                });
+
+        if let Err(err) = tokio::select! {
+            res = read_process => res,
+            res = write_process => res,
+        } {
+            error!("An error ocurred in R/W process for client {:?}", client);
+        }
+
+        // self.on_disconnect_client(client.id).await;
+        info!("Client with ID: {} disconnected", client.user_id);
+
+        Ok(())
     }
 
     /// Subscribes a client (User) to the Hub's main `channel`
     /// retrieving a `Receiver` of the channel
-    pub async fn subscribe(&self) -> Receiver<Proto<Output>> {
+    pub fn subscribe(&self) -> Receiver<Proto<Output>> {
         self.output_tx.subscribe()
     }
 
@@ -59,7 +94,7 @@ impl HubService {
 
         loop {
             delay_for(five_seconds).await;
-            for user in self.users.iter() {
+            for client in self.clients.iter() {
                 self.publish(Proto::poll_interval());
             }
         }
@@ -68,8 +103,8 @@ impl HubService {
     /// Handles `Proto<Input>` instances coming from the WebSocket stream
     pub async fn handle_input_proto(&self, input_proto: Proto<Input>) {
         match input_proto.inner {
-            Input::Message(inner) => {
-                self.handle_input_message(inner);
+            Input(incoming_message_dto) => {
+                self.handle_input_message(incoming_message_dto);
             }
         }
     }
@@ -93,11 +128,11 @@ impl HubService {
     ///
     /// If the author doesn't belongs to the chat specified, then
     /// is the message is not published
-    pub async fn handle_input_message(&self, incoming_message: IncomingMessage) {
+    pub async fn handle_input_message(&self, incoming_message: InputProtoMessageDTO) {
         info!("Received input message: {:?}", incoming_message);
         if let Ok(message) = self
             .chat_provider
-            .handle_incoming_message(incoming_message.message)
+            .handle_incoming_message(incoming_message)
             .await
         {
             self.publish_to_chat(message).await;
