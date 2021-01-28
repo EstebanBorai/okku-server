@@ -11,14 +11,6 @@ pub struct Chat {
 }
 
 impl Chat {
-    pub fn new_with_participants(participants_ids: Vec<Uuid>) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            messages: Vec::new(),
-            participants_ids,
-        }
-    }
-
     pub fn append_message(&mut self, message: Message) {
         self.messages.push(message);
         self.messages.sort_by_key(|msg| msg.created_at);

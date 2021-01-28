@@ -13,7 +13,7 @@ pub struct CreateChatPayload {
 }
 
 pub async fn create_chat(
-    claims: Claims,
+    _: Claims,
     services: Services,
     payload: CreateChatPayload,
 ) -> Result<impl warp::Reply, Rejection> {
@@ -24,10 +24,8 @@ pub async fn create_chat(
         .await
     {
         Ok(chat) => Ok(Response::new(chat).status_code(StatusCode::CREATED)),
-        Err(e) => Err(
-            Response::message(String::from("Unable to create a new chat"))
-                .status_code(StatusCode::BAD_REQUEST)
-                .reject(),
-        ),
+        Err(e) => Err(Response::message(e.to_string())
+            .status_code(StatusCode::BAD_REQUEST)
+            .reject()),
     }
 }

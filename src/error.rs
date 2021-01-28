@@ -47,18 +47,18 @@ pub enum Error {
     InvalidUsername(String),
     #[error("Invalid UTF-8 provided, {0}")]
     InvalidUtf8(String),
-    #[error("An error ocurred reading a message from the WebSocket: {0}")]
-    WebSocketReadMessageError(String),
     #[error("An I/O error ocurred: {0}")]
     IO(String),
     #[error("Username doesn't exists")]
     UserNotFound,
     #[error("JSON Parsing Error, {0}")]
     JsonParsingError(String),
-    #[error("Invalid message kind provided, {0}")]
-    ParseMessageKindError(String),
-    #[error("Unable to relate Chat: {0} with User: {1}")]
-    RelateChatWithUserError(Uuid, Uuid),
+    #[error("Not enough participants to create a Chat. You must provide at least 2 participants, provided {0}")]
+    ChatNotEnoughParticipants(u8),
+    #[error("Chat doesn't exists")]
+    ChatNotFound,
+    #[error("User with ID: {0} doesn't exists in Chat with ID: {1}")]
+    UserDoesntBelongToChat(Uuid, Uuid),
 }
 
 impl Reject for Error {}

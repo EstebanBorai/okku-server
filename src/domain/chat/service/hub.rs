@@ -8,6 +8,7 @@ use uuid::Uuid;
 use warp::ws::WebSocket;
 
 use crate::domain::chat::entity::{IncomingMessage, Input, Message, Output, Parcel, Proto};
+use crate::domain::chat::ChatRepository;
 use crate::domain::user::User;
 
 use super::chat::ChatProvider;
@@ -18,19 +19,17 @@ pub struct HubService {
     users: Vec<User>,
 }
 
-impl Default for HubService {
-    fn default() -> Self {
+impl HubService {
+    pub fn new(chat_repository: ChatRepository) -> Self {
         let (output_tx, _) = channel(16_usize);
 
         Self {
             output_tx,
             users: Vec::new(),
-            chat_provider: ChatProvider::default(),
+            chat_provider: ChatProvider::new(chat_repository),
         }
     }
-}
 
-impl HubService {
     /// Registers a new client (User) to the `Hub` and forwards messages
     /// from the Hub's main channel to the client's WebSocket sink.
     pub async fn register(&self, user_id: &Uuid, web_socket: WebSocket) {

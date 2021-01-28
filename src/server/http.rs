@@ -106,6 +106,9 @@ impl Http {
             warp::post().and(signup.or(upload_file).or(upload_avatar).or(create_chat));
         let routes = get_routes.or(post_routes);
         let routes = routes.recover(handler::rejection::handle_rejection);
-        let serving_proccess = warp::serve(routes.with(cors)).bind(([127, 0, 0, 1], self.port));
+
+        warp::serve(routes.with(cors))
+            .bind(([127, 0, 0, 1], self.port))
+            .await;
     }
 }

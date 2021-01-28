@@ -10,27 +10,31 @@ use uuid::Uuid;
 
 use crate::domain::chat::dto::InputProtoMessageDTO;
 use crate::domain::chat::entity::{Chat, IncomingMessage, Input, Message, Output, Proto};
+use crate::domain::chat::ChatRepository;
 use crate::domain::user::User;
+use crate::error::{Error, Result};
 
 pub struct ChatProvider {
     chats: RwLock<HashMap<Uuid, Chat>>,
-}
-
-impl Default for ChatProvider {
-    fn default() -> Self {
-        Self {
-            chats: RwLock::new(HashMap::new()),
-        }
-    }
+    chat_repository: ChatRepository,
 }
 
 impl ChatProvider {
-    pub async fn create_chat(&self, participants_ids: Vec<Uuid>) -> Result<Chat, ()> {
+    pub fn new(chat_repository: ChatRepository) -> Self {
+        Self {
+            chats: RwLock::new(HashMap::new()),
+            chat_repository,
+        }
+    }
+
+    pub async fn create_chat(&self, participants_ids: Vec<Uuid>) -> Result<Chat> {
         if participants_ids.len() < 2 {
-            return Err(());
+            return Err(Error::ChatNotEnoughParticipants(
+                participants_ids.len() as u8
+            ));
         }
 
-        let chat = Chat::new_with_participants(participants_ids);
+        let chat = self.chat_repository.create(participants_ids).await?;
 
         self.chats.write().await.insert(chat.id, chat.clone());
 
@@ -40,7 +44,7 @@ impl ChatProvider {
     pub async fn handle_incoming_message(
         &self,
         incoming_message: InputProtoMessageDTO,
-    ) -> Result<Message, ()> {
+    ) -> Result<Message> {
         let (chat, incoming_message) = self.validate_incoming_message(incoming_message).await?;
 
         self.store_message(chat, incoming_message).await
@@ -50,7 +54,7 @@ impl ChatProvider {
         &self,
         chat: Chat,
         incoming_message: InputProtoMessageDTO,
-    ) -> Result<Message, ()> {
+    ) -> Result<Message> {
         // Store message into the database
         Ok(Message {
             id: Uuid::new_v4(),
@@ -67,7 +71,7 @@ impl ChatProvider {
     async fn validate_incoming_message(
         &self,
         incoming_message: InputProtoMessageDTO,
-    ) -> Result<(Chat, InputProtoMessageDTO), ()> {
+    ) -> Result<(Chat, InputProtoMessageDTO)> {
         if let Some(chat) = self.chats.read().await.get(&incoming_message.chat_id) {
             if chat
                 .participants_ids
@@ -77,17 +81,20 @@ impl ChatProvider {
                 return Ok((chat.to_owned(), incoming_message));
             }
 
-            return Err(());
+            return Err(Error::UserDoesntBelongToChat(
+                incoming_message.author_id,
+                incoming_message.chat_id,
+            ));
         }
 
-        Err(())
+        Err(Error::ChatNotFound)
     }
 
-    pub async fn find_chat(&self, chat_id: &Uuid) -> Result<Chat, ()> {
+    pub async fn find_chat(&self, chat_id: &Uuid) -> Result<Chat> {
         if let Some(chat) = self.chats.read().await.get(&chat_id) {
             return Ok(chat.clone());
         }
 
-        Err(())
+        Err(Error::ChatNotFound)
     }
 }
