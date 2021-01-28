@@ -1,5 +1,6 @@
 use futures::StreamExt;
 use std::default::Default;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast::{channel, Receiver, Sender};
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -7,34 +8,39 @@ use tokio::time::delay_for;
 use uuid::Uuid;
 use warp::ws::WebSocket;
 
-use crate::domain::chat::entity::{IncomingMessage, Input, Message, Output, Parcel, Proto};
+use crate::application::service::UserService;
+use crate::domain::chat::entity::{Input, Message, Output, Parcel, Proto};
 use crate::domain::chat::ChatRepository;
 use crate::domain::user::User;
+use crate::error::Result;
 
 use super::chat::ChatProvider;
 
 pub struct HubService {
     pub output_tx: Sender<Proto<Output>>,
     pub chat_provider: ChatProvider,
+    pub user_service: Arc<UserService>,
     users: Vec<User>,
 }
 
 impl HubService {
-    pub fn new(chat_repository: ChatRepository) -> Self {
+    pub fn new(chat_repository: ChatRepository, user_service: Arc<UserService>) -> Self {
         let (output_tx, _) = channel(16_usize);
 
         Self {
             output_tx,
             users: Vec::new(),
             chat_provider: ChatProvider::new(chat_repository),
+            user_service,
         }
     }
 
     /// Registers a new client (User) to the `Hub` and forwards messages
     /// from the Hub's main channel to the client's WebSocket sink.
-    pub async fn register(&self, user_id: &Uuid, web_socket: WebSocket) {
+    pub async fn register(&self, user_id: &Uuid, web_socket: WebSocket) -> Result<()> {
         let output_rx = self.subscribe();
         let (sink, stream) = web_socket.split();
+        let user = self.user_service.find_by_id(user_id).await?;
 
         todo!()
     }
@@ -54,7 +60,7 @@ impl HubService {
         loop {
             delay_for(five_seconds).await;
             for user in self.users.iter() {
-                self.publish(Proto::poll_interval(user.id.clone()));
+                self.publish(Proto::poll_interval());
             }
         }
     }
@@ -124,10 +130,7 @@ impl HubService {
             for participant_id in chat.participants_ids.iter() {
                 if *participant_id != message_author_id {
                     self.output_tx
-                        .send(Proto::new_output(
-                            Parcel::Message(message.clone()),
-                            participant_id.clone(),
-                        ))
+                        .send(Proto::new_output(Parcel::LocalMessage(message.clone())))
                         .unwrap();
                 }
             }

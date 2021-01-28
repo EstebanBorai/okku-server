@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::chat::Message;
+use crate::domain::chat::{InputProtoMessageDTO, Message};
 use crate::domain::user::User;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -18,12 +18,13 @@ pub enum Parcel {
     #[serde(rename = "user-left")]
     UserLeft(UserLeft),
     #[serde(rename = "posted")]
-    Message(Message),
+    ForeignMessage(Uuid, InputProtoMessageDTO),
+    #[serde(rename = "message")]
+    LocalMessage(Message),
 }
 
 #[derive(Clone, Debug)]
 pub struct Output {
-    pub receiver: Uuid,
     pub parcel: Parcel,
 }
 

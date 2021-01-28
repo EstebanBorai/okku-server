@@ -1,8 +1,8 @@
-use uuid::Uuid;
+use serde::{Deserialize, Serialize};
 
 use super::{Output, Parcel};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Proto<T>
 where
     T: std::clone::Clone + std::fmt::Debug,
@@ -20,17 +20,16 @@ where
 }
 
 impl Proto<Output> {
-    pub fn new_output(parcel: Parcel, receiver: Uuid) -> Self {
+    pub fn new_output(parcel: Parcel) -> Self {
         Self {
-            inner: Output { parcel, receiver },
+            inner: Output { parcel },
         }
     }
 
-    pub fn poll_interval(receiver: Uuid) -> Self {
+    pub fn poll_interval() -> Self {
         Self {
             inner: Output {
                 parcel: Parcel::Poll,
-                receiver,
             },
         }
     }
