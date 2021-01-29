@@ -32,7 +32,7 @@ pub struct Services {
 }
 
 impl Services {
-    pub fn init(db_pool: &'static DbPool, _: Sender<Parcel>) -> Self {
+    pub fn init(db_pool: &'static DbPool) -> Self {
         let secret_service = Arc::new(secret::make_secret_service(db_pool));
         let file_service = Arc::new(file::make_file_service(db_pool));
         let profile_service = Arc::new(profile::make_profile_service(db_pool));

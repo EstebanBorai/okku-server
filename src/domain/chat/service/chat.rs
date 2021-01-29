@@ -41,6 +41,10 @@ impl ChatProvider {
         Ok(chat)
     }
 
+    pub async fn fetch_chats(&self, user_id: &Uuid) -> Result<Vec<Chat>> {
+        
+    }
+
     pub async fn handle_incoming_message(
         &self,
         incoming_message: InputProtoMessageDTO,

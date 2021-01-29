@@ -40,6 +40,30 @@ impl ChatRepository {
         })
     }
 
+    pub async fn fetch_chats_by_participant_id(participant_id: &Uuid) -> Result<Vec<Chat>> {
+        todo!();
+        // let chats: Vec<ChatDTO> =             sqlx::query_as("SELECT * FROM chats WHERE (uuid_generate_v4()) RETURNING *")
+        // .fetch_one(&mut tx)
+        // .await?;
+        // WITH user_chats AS (
+        //     SELECT
+        //         chats_users.chat_id
+        //     FROM
+        //         chats_users
+        //     WHERE
+        //         chats_users.user_id = 'a63ddc44-f19c-4c32-a926-56c1eb09750f'::uuid
+        //     GROUP BY
+        //         chats_users.chat_id
+        // )
+        // SELECT
+        //     *
+        // FROM
+        //     user_chats
+        // INNER JOIN chats_user ON chats_users.chat_id = user_chats.chat_id
+        // WHERE
+        //     user_chats.chat_id = chats_users.user_id;
+    }
+
     /// Creates a SQL query to insert multiple relationships of
     /// chats(id) and users(id) with the provided `participants_ids`
     ///

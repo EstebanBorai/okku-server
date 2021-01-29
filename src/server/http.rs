@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
-use tokio::sync::broadcast::channel;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 use warp::http::{self, StatusCode};
 use warp::Filter;
 
 use crate::application::service::Services;
-use crate::domain::chat::Parcel;
+use crate::domain::chat::{Input, Proto};
 use crate::infrastructure::database::{get_db_pool, ping};
 use crate::server::utils::Response;
 
@@ -33,8 +33,8 @@ impl Http {
         ping().await.expect("Unable to PING Database");
 
         let db_pool = get_db_pool().await;
-        let (chat_tx, chat_rx) = channel::<Parcel>(256_usize);
-        let services = Services::init(db_pool, chat_tx);
+        let (chat_input_tx, chat_input_rx) = unbounded_channel::<Proto<Input>>();
+        let services = Services::init(db_pool);
         let cors = warp::cors()
             .allow_any_origin()
             .allow_credentials(true)
@@ -57,6 +57,36 @@ impl Http {
         let chats = api_v1.and(warp::path("chats"));
         let files = api_v1.and(warp::path("files"));
         let profiles = api_v1.and(warp::path("profiles"));
+
+        let chat_web_socket = chats
+            .and(warp::ws::ws())
+            .and(with_service(services.clone()))
+            .and(warp::query())
+            .and(warp::any().map(move || chat_input_tx.clone()))
+            .map(
+                move |ws: warp::ws::Ws,
+                      services: Services,
+                      qparams: ChatQueryParams,
+                      chat_input_tx: UnboundedSender<Proto<Input>>| {
+                    ws.on_upgrade(move |web_socket| async move {
+                        if let Ok(claims) = services.auth_service.verify_token(&qparams.token).await
+                        {
+                            match services
+                                .hub_service
+                                .register_and_listen(&claims.user_id, web_socket, chat_input_tx)
+                                .await
+                            {
+                                Ok(_) => {}
+                                Err(e) => error!("{}", e.to_string()),
+                            }
+                        } else {
+                            Response::message("Invalid token param provided".to_string())
+                                .status_code(StatusCode::FORBIDDEN)
+                                .reject();
+                        }
+                    })
+                },
+            );
 
         let signup = auth
             .and(warp::path("signup"))
@@ -104,11 +134,15 @@ impl Http {
         let get_routes = warp::get().and(login.or(me.or(download_file)));
         let post_routes =
             warp::post().and(signup.or(upload_file).or(upload_avatar).or(create_chat));
-        let routes = get_routes.or(post_routes);
+        let routes = chat_web_socket.or(get_routes.or(post_routes));
         let routes = routes.recover(handler::rejection::handle_rejection);
 
-        warp::serve(routes.with(cors))
-            .bind(([127, 0, 0, 1], self.port))
-            .await;
+        let serve_process = warp::serve(routes.with(cors)).bind(([127, 0, 0, 1], self.port));
+        let chat_hub_process = services.hub_service.init(chat_input_rx);
+
+        tokio::select! {
+            _ = serve_process => {},
+            _ = chat_hub_process => {},
+        }
     }
 }
