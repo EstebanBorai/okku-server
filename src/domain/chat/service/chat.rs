@@ -42,7 +42,7 @@ impl ChatProvider {
     }
 
     pub async fn fetch_chats(&self, user_id: &Uuid) -> Result<Vec<Chat>> {
-        
+        todo!()
     }
 
     pub async fn handle_incoming_message(

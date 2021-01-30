@@ -81,6 +81,7 @@ impl Client {
             )
             .map_ok(|output_proto| {
                 let data = serde_json::to_string(&output_proto.inner.parcel).unwrap();
+                info!("Writing: {}", data);
 
                 warp::ws::Message::text(data)
             })

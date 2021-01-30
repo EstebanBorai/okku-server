@@ -72,6 +72,7 @@ impl HubService {
             res = write_process => res,
         } {
             error!("An error ocurred in R/W process for client {:?}", client);
+            error!("Error: {:?}", err);
         }
 
         // self.on_disconnect_client(client.id).await;
@@ -104,7 +105,7 @@ impl HubService {
     pub async fn handle_input_proto(&self, input_proto: Proto<Input>) {
         match input_proto.inner {
             Input(incoming_message_dto) => {
-                self.handle_input_message(incoming_message_dto);
+                self.handle_input_message(incoming_message_dto).await;
             }
         }
     }
@@ -130,16 +131,18 @@ impl HubService {
     /// is the message is not published
     pub async fn handle_input_message(&self, incoming_message: InputProtoMessageDTO) {
         info!("Received input message: {:?}", incoming_message);
-        if let Ok(message) = self
+        match self
             .chat_provider
             .handle_incoming_message(incoming_message)
             .await
         {
-            self.publish_to_chat(message).await;
-            return;
+            Ok(message) => {
+                info!("Publishing to Chat!");
+                self.publish_to_chat(message).await;
+                return;
+            }
+            Err(e) => error!("An error occured handling the message: {:?}", e),
         }
-
-        // Handle error someway
     }
 
     /// Publishes an `Proto<Output>` to Hub's main channel receiver.
@@ -164,6 +167,7 @@ impl HubService {
         if self.output_tx.receiver_count() > 0 {
             for participant_id in chat.participants_ids.iter() {
                 if *participant_id != message_author_id {
+                    info!("Sent to output as {:?}", message);
                     self.output_tx
                         .send(Proto::new_output(Parcel::LocalMessage(message.clone())))
                         .unwrap();
