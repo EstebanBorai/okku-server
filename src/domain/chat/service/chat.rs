@@ -77,6 +77,22 @@ impl ChatProvider {
         incoming_message: InputProtoMessageDTO,
     ) -> Result<(Chat, InputProtoMessageDTO)> {
         if let Some(chat) = self.chats.read().await.get(&incoming_message.chat_id) {
+            warn!("RECEIVED ON 1: {:?}", chat);
+            if chat
+                .participants_ids
+                .iter()
+                .any(|participant_id| *participant_id == incoming_message.author_id)
+            {
+                return Ok((chat.to_owned(), incoming_message));
+            }
+        }
+
+        if let Ok(chat) = self
+            .chat_repository
+            .find_by_id(&incoming_message.chat_id)
+            .await
+        {
+            warn!("RECEIVED ON 2: {:?}", chat);
             if chat
                 .participants_ids
                 .iter()
@@ -99,6 +115,11 @@ impl ChatProvider {
             return Ok(chat.clone());
         }
 
-        Err(Error::ChatNotFound)
+        let chat = self.chat_repository.find_by_id(chat_id).await?;
+
+        match self.chats.write().await.insert(chat.id, chat) {
+            Some(chat) => Ok(chat),
+            None => Err(Error::ChatNotFound),
+        }
     }
 }

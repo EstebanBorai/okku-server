@@ -1,9 +1,12 @@
-use sqlx::postgres::Postgres;
+use futures::TryStreamExt;
+use sqlx::postgres::{PgRow, Postgres};
+use sqlx::Row;
 use sqlx::Transaction;
+use std::convert::TryInto;
 use uuid::Uuid;
 
 use crate::domain::chat::entity::Chat;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::infrastructure::database::DbPool;
 
 use super::dto::{ChatDTO, ChatsUsersDTO};
@@ -35,6 +38,37 @@ impl ChatRepository {
 
         Ok(Chat {
             id: chat.id,
+            messages: Vec::new(),
+            participants_ids,
+        })
+    }
+
+    pub async fn find_by_id(&self, id: &Uuid) -> Result<Chat> {
+        let mut participants_ids: Vec<Uuid> = Vec::new();
+        let mut rows = sqlx::query(r#"
+            SELECT
+                chats_users.user_id
+            FROM
+                chats
+                INNER JOIN chats_users ON chats_users.chat_id = $1
+            WHERE
+                chats.id = $1"#,
+        )
+        .bind(id)
+        .fetch(self.db_pool);
+
+        while let Some(row) = rows.try_next().await? {
+            // map the row into a user-defined domain type
+            let pid: Uuid = row.try_get("user_id")?;
+
+            participants_ids.push(pid);
+        }
+
+        info!("Found chat with id: {:?}", id);
+        info!("Participants: {:?}", participants_ids);
+
+        Ok(Chat {
+            id: id.clone(),
             messages: Vec::new(),
             participants_ids,
         })
