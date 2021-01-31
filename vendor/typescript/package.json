@@ -1,0 +1,28 @@
+{
+  "name": "xeed-client",
+  "version": "0.1.0",
+  "description": "Xeed chat client library",
+  "main": "dist/main.js",
+  "repository": "https://github.com/EstebanBorai/xeed-server.git",
+  "author": "Esteban Borai <estebanborai@gmail.com> (https://github.com/EstebanBorai)",
+  "license": "MIT",
+  "scripts": {
+    "build": "webpack",
+    "dev": "NODE_ENV=development DEBUG=knex:tx ts-node-dev --respawn --transpile-only src/main.ts",
+    "eslint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "fmt": "eslint . --ext .js,.jsx,.ts,.tsx --fix && prettier --write \"**/*.{json,md,yml}\"",
+    "prettier": "prettier -c \"**/*.{md,json,yml,sh}\""
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.14.1",
+    "@typescript-eslint/parser": "^4.14.1",
+    "eslint": "^7.18.0",
+    "eslint-config-prettier": "^7.2.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "prettier": "^2.2.1",
+    "ts-loader": "^8.0.14",
+    "typescript": "^4.1.3",
+    "webpack": "^5.19.0",
+    "webpack-cli": "^4.4.0"
+  }
+}
