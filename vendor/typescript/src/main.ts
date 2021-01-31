@@ -41,7 +41,6 @@ export interface InputProto {
 }
 
 export default class XeedClient {
-  private token: string;
   private webSocket: WebSocket | null;
   private config: Config;
   private sentMessages: InputProto[];
@@ -50,11 +49,8 @@ export default class XeedClient {
   private user: User | null;
 
   constructor(
-    { host, port }: { host: string; port: number },
-    token: string,
-    eventHandlers: EventHandlers,
+    { host, port }: { host: string; port: number }, eventHandlers: EventHandlers,
   ) {
-    this.token = token;
     this.webSocket = null;
     this.receivedMessages = [];
     this.sentMessages = [];
@@ -68,26 +64,32 @@ export default class XeedClient {
     };
   }
 
-  public async connect(): Promise<void> {
+  public async connect(username: string, password: string): Promise<User> {
     const {
       config: {
         server: { host, port },
       },
-      token,
     } = this;
 
-    this.user = await this.me();
+    const loginResponse = await this.login(username, password);
+    const meResponse = await this.me(loginResponse.token);
+
+    this.user = meResponse;
 
     const ws = new WebSocket(
-      `ws://${host}:${port}/api/v1/chats?token=${token}`,
+      `ws://${host}:${port}/api/v1/chats?token=${loginResponse.token}`,
     );
 
     ws.onclose = this.eventHandlers.onDisconnect;
     ws.onerror = this.eventHandlers.onError;
-    ws.onmessage = this.handleIncomingMessage;
+    ws.onmessage = (message: MessageEvent) => this.handleIncomingMessage(message);
     ws.onopen = this.eventHandlers.onConnect;
 
     this.webSocket = ws;
+
+    console.log('Connected as ' + this.user.name + ' id: ' + this.user.id);
+
+    return this.user;
   }
 
   public disconnect(): void {
@@ -117,13 +119,13 @@ export default class XeedClient {
     this.eventHandlers.onMessage(parsedMessage);
   }
 
-  private async me(): Promise<{ id: string; name: string }> {
+  private async me(token: string): Promise<{ id: string; name: string }> {
     const url = new URL(
       `http://${this.config.server.host}:${this.config.server.port}/api/v1/auth/me`,
     );
     const headers = new Headers();
 
-    headers.append('Authorization', 'Bearer ' + this.token);
+    headers.append('Authorization', 'Bearer ' + token);
 
     const response = await fetch(url.toString(), {
       headers,
@@ -139,6 +141,28 @@ export default class XeedClient {
     const json = await response.json();
 
     return json.user;
+  }
+
+  private async login(username: string, password: string): Promise<{ token: string; }> {
+    const url = new URL(
+      `http://${this.config.server.host}:${this.config.server.port}/api/v1/auth/login`,
+    );
+    const headers = new Headers();
+
+    headers.append('Authorization', 'Basic ' + btoa(`${username}:${password}`));
+
+    const response = await fetch(url.toString(), {
+      headers,
+      mode: 'cors',
+    });
+
+    if (response.status !== 200) {
+      throw new Error(
+        'LoginError: ' + response.status + ' ' + response.statusText,
+      );
+    }
+
+    return response.json();
   }
 }
 

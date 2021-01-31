@@ -8,17 +8,14 @@
 <body>
   <script src="../dist/main.js" ></script>
   <script>
-    const token = '';
-    const xeed = new XeedClient({
+    window.xeed = new XeedClient({
       host: '127.0.0.1',
       port: 3000
-    }, token, {
+    }, {
       onMessage(message) {
-        console.log('Received: ' + message);
+        console.log(JSON.stringify(message, null, 2));
       },
-      onConnect() {
-        console.log('Connected!');
-      },
+      onConnect() {},
       onDisconnect() {
         console.warn('Disconnected!');
       },
@@ -26,14 +23,6 @@
         console.error(err);
       },
     });
-
-    xeed.connect()
-      .then(() => {
-        console.log('xeed.connect succeded');
-      })
-      .catch((err) => {
-        console.error(err);
-      });
   </script>
 </body>
 </html>
