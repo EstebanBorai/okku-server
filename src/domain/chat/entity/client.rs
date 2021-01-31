@@ -63,6 +63,10 @@ impl Client {
             .try_filter(
                 move |output_proto| match output_proto.inner.parcel.clone() {
                     Parcel::LocalMessage(message) => {
+                        if message.author.id == user_id {
+                            return future::ready(false);
+                        }
+
                         if message
                             .chat
                             .participants_ids
