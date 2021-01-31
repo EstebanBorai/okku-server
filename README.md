@@ -2,7 +2,7 @@
   <div align="center" style="display: block; text-align: center;">
     <img src="./docs/images/logo.png" height="120" width="120" />
   </div>
-  <h1 align="center">comlink-server</h1>
+  <h1 align="center">xeed-server</h1>
   <h4 align="center">
     The Hoth project aims to develop a realtime chat application using WebSocket and asynchronous channels from Tokio. This repository contains the Back-End logic for the application
   </h4>
@@ -10,16 +10,16 @@
 
 <div align="center">
 
-  ![Build](https://github.com/EstebanBorai/comlink-server/workflows/build/badge.svg)
-  ![Lint](https://github.com/EstebanBorai/comlink-server/workflows/clippy/fmt/badge.svg)
+  ![Build](https://github.com/EstebanBorai/xeed-server/workflows/build/badge.svg)
+  ![Lint](https://github.com/EstebanBorai/xeed-server/workflows/clippy/fmt/badge.svg)
 
 </div>
 
 ## Documentation
 
-- [Setup](https://github.com/EstebanBorai/comlink-server/wiki/Setup)
+- [Setup](https://github.com/EstebanBorai/xeed-server/wiki/Setup)
 - API
-  - [Register and Login](https://github.com/EstebanBorai/comlink-server/wiki/Register-and-Login)
+  - [Register and Login](https://github.com/EstebanBorai/xeed-server/wiki/Register-and-Login)
 
 ## Architecture
 

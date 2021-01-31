@@ -1,5 +1,5 @@
 [package]
-name = "comlink-server"
+name = "xeed-server"
 version = "0.7.3"
 authors = ["Esteban Borai <estebanborai@gmail.com>"]
 edition = "2018"

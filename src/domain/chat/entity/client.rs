@@ -45,7 +45,6 @@ impl Client {
                 Ok(message) => {
                     let input: Proto<Input> =
                         serde_json::from_str(message.to_str().unwrap()).unwrap();
-                    info!("Received: {:?}", input);
 
                     Ok(input)
                 }
@@ -81,7 +80,6 @@ impl Client {
             )
             .map_ok(|output_proto| {
                 let data = serde_json::to_string(&output_proto.inner.parcel).unwrap();
-                info!("Writing: {}", data);
 
                 warp::ws::Message::text(data)
             })

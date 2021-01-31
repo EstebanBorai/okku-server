@@ -52,7 +52,6 @@ pub fn with_authorization() -> impl Filter<Extract = (Claims,), Error = Rejectio
 
         match decode_result {
             Ok(token) => {
-                info!("Received request from {}", token.claims.user_id);
                 Ok(token.claims)
             }
             Err(_) => Err(

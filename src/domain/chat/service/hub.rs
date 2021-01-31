@@ -48,8 +48,6 @@ impl HubService {
         let user = self.user_service.find_by_id(user_id).await?;
         let client = Client::from(user.clone());
 
-        info!("Registered: {:?}", client);
-
         let read_process = client.read_input(stream).try_for_each(|proto| async {
             input_tx.send(proto).unwrap();
             Ok(())
@@ -70,13 +68,7 @@ impl HubService {
         if let Err(err) = tokio::select! {
             res = read_process => res,
             res = write_process => res,
-        } {
-            error!("An error ocurred in R/W process for client {:?}", client);
-            error!("Error: {:?}", err);
-        }
-
-        // self.on_disconnect_client(client.id).await;
-        info!("Client with ID: {} disconnected", client.user_id);
+        } {}
 
         Ok(())
     }
@@ -130,18 +122,16 @@ impl HubService {
     /// If the author doesn't belongs to the chat specified, then
     /// is the message is not published
     pub async fn handle_input_message(&self, incoming_message: InputProtoMessageDTO) {
-        info!("Received input message: {:?}", incoming_message);
         match self
             .chat_provider
             .handle_incoming_message(incoming_message)
             .await
         {
             Ok(message) => {
-                info!("Publishing to Chat!");
                 self.publish_to_chat(message).await;
                 return;
             }
-            Err(e) => error!("An error occured handling the message: {:?}", e),
+            Err(e) => {},
         }
     }
 
@@ -167,7 +157,6 @@ impl HubService {
         if self.output_tx.receiver_count() > 0 {
             for participant_id in chat.participants_ids.iter() {
                 if *participant_id != message_author_id {
-                    info!("Sent to output as {:?}", message);
                     self.output_tx
                         .send(Proto::new_output(Parcel::LocalMessage(message.clone())))
                         .unwrap();

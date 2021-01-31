@@ -45,7 +45,8 @@ impl ChatRepository {
 
     pub async fn find_by_id(&self, id: &Uuid) -> Result<Chat> {
         let mut participants_ids: Vec<Uuid> = Vec::new();
-        let mut rows = sqlx::query(r#"
+        let mut rows = sqlx::query(
+            r#"
             SELECT
                 chats_users.user_id
             FROM
@@ -58,14 +59,10 @@ impl ChatRepository {
         .fetch(self.db_pool);
 
         while let Some(row) = rows.try_next().await? {
-            // map the row into a user-defined domain type
             let pid: Uuid = row.try_get("user_id")?;
 
             participants_ids.push(pid);
         }
-
-        info!("Found chat with id: {:?}", id);
-        info!("Participants: {:?}", participants_ids);
 
         Ok(Chat {
             id: id.clone(),
@@ -76,26 +73,6 @@ impl ChatRepository {
 
     pub async fn fetch_chats_by_participant_id(participant_id: &Uuid) -> Result<Vec<Chat>> {
         todo!();
-        // let chats: Vec<ChatDTO> =             sqlx::query_as("SELECT * FROM chats WHERE (uuid_generate_v4()) RETURNING *")
-        // .fetch_one(&mut tx)
-        // .await?;
-        // WITH user_chats AS (
-        //     SELECT
-        //         chats_users.chat_id
-        //     FROM
-        //         chats_users
-        //     WHERE
-        //         chats_users.user_id = 'a63ddc44-f19c-4c32-a926-56c1eb09750f'::uuid
-        //     GROUP BY
-        //         chats_users.chat_id
-        // )
-        // SELECT
-        //     *
-        // FROM
-        //     user_chats
-        // INNER JOIN chats_user ON chats_users.chat_id = user_chats.chat_id
-        // WHERE
-        //     user_chats.chat_id = chats_users.user_id;
     }
 
     /// Creates a SQL query to insert multiple relationships of

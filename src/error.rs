@@ -71,7 +71,6 @@ impl Error {
 
 impl From<SqlxError> for Error {
     fn from(e: SqlxError) -> Self {
-        error!("{:?}", e);
         Self::DatabaseError(e.to_string(), e)
     }
 }

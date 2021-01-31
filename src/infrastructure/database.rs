@@ -33,14 +33,12 @@ pub async fn get_db_pool() -> &'static DbPool {
 }
 
 pub async fn ping() -> Result<()> {
-    info!("Checking on database connection...");
     let pool = get_db_pool().await;
 
     sqlx::query("SELECT 1")
         .fetch_one(pool)
         .await
         .expect("Failed to PING database");
-    info!("Database PING executed successfully!");
 
     Ok(())
 }

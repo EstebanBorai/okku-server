@@ -77,7 +77,6 @@ impl ChatProvider {
         incoming_message: InputProtoMessageDTO,
     ) -> Result<(Chat, InputProtoMessageDTO)> {
         if let Some(chat) = self.chats.read().await.get(&incoming_message.chat_id) {
-            warn!("RECEIVED ON 1: {:?}", chat);
             if chat
                 .participants_ids
                 .iter()
@@ -92,7 +91,6 @@ impl ChatProvider {
             .find_by_id(&incoming_message.chat_id)
             .await
         {
-            warn!("RECEIVED ON 2: {:?}", chat);
             if chat
                 .participants_ids
                 .iter()
