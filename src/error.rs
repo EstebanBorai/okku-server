@@ -59,6 +59,8 @@ pub enum Error {
     ChatNotFound,
     #[error("User with ID: {0} doesn't exists in Chat with ID: {1}")]
     UserDoesntBelongToChat(Uuid, Uuid),
+    #[error("Store message error!")]
+    UnableToStoreMessage,
 }
 
 impl Reject for Error {}
