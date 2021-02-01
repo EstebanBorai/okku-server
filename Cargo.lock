@@ -2638,7 +2638,7 @@ checksum = "85e60b0d1b5f99db2556934e21937020776a5d31520bf169e851ac44e6420214"
 
 [[package]]
 name = "xeed-server"
-version = "0.7.3"
+version = "0.8.0"
 dependencies = [
  "async-trait",
  "async_once",
