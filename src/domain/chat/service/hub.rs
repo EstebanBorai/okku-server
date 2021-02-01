@@ -11,7 +11,7 @@ use warp::ws::WebSocket;
 use crate::application::service::UserService;
 use crate::domain::chat::dto::InputProtoMessageDTO;
 use crate::domain::chat::entity::{Client, Input, Message, Output, Parcel, Proto};
-use crate::domain::chat::ChatRepository;
+use crate::domain::chat::{ChatRepository, MessagesRepository};
 use crate::error::Result;
 
 use super::chat::ChatProvider;
@@ -24,13 +24,17 @@ pub struct HubService {
 }
 
 impl HubService {
-    pub fn new(chat_repository: ChatRepository, user_service: Arc<UserService>) -> Self {
+    pub fn new(
+        chat_repository: ChatRepository,
+        messages_repository: MessagesRepository,
+        user_service: Arc<UserService>,
+    ) -> Self {
         let (output_tx, _) = channel(16_usize);
 
         Self {
             output_tx,
             clients: Vec::new(),
-            chat_provider: ChatProvider::new(chat_repository),
+            chat_provider: ChatProvider::new(chat_repository, messages_repository),
             user_service,
         }
     }
@@ -131,7 +135,7 @@ impl HubService {
                 self.publish_to_chat(message).await;
                 return;
             }
-            Err(e) => {},
+            Err(e) => {}
         }
     }
 

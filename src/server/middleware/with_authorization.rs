@@ -51,9 +51,7 @@ pub fn with_authorization() -> impl Filter<Extract = (Claims,), Error = Rejectio
         );
 
         match decode_result {
-            Ok(token) => {
-                Ok(token.claims)
-            }
+            Ok(token) => Ok(token.claims),
             Err(_) => Err(
                 Response::message("Invalid authorization header provided".to_string())
                     .status_code(StatusCode::FORBIDDEN)

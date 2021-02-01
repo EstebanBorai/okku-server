@@ -10,20 +10,22 @@ use uuid::Uuid;
 
 use crate::domain::chat::dto::InputProtoMessageDTO;
 use crate::domain::chat::entity::{Chat, Input, Message, Output, Proto};
-use crate::domain::chat::ChatRepository;
+use crate::domain::chat::{ChatRepository, MessagesRepository};
 use crate::domain::user::User;
 use crate::error::{Error, Result};
 
 pub struct ChatProvider {
     chats: RwLock<HashMap<Uuid, Chat>>,
     chat_repository: ChatRepository,
+    messages_repository: MessagesRepository,
 }
 
 impl ChatProvider {
-    pub fn new(chat_repository: ChatRepository) -> Self {
+    pub fn new(chat_repository: ChatRepository, messages_repository: MessagesRepository) -> Self {
         Self {
             chats: RwLock::new(HashMap::new()),
             chat_repository,
+            messages_repository,
         }
     }
 
@@ -51,25 +53,9 @@ impl ChatProvider {
     ) -> Result<Message> {
         let (chat, incoming_message) = self.validate_incoming_message(incoming_message).await?;
 
-        self.store_message(chat, incoming_message).await
-    }
-
-    async fn store_message(
-        &self,
-        chat: Chat,
-        incoming_message: InputProtoMessageDTO,
-    ) -> Result<Message> {
-        // Store message into the database
-        Ok(Message {
-            id: Uuid::new_v4(),
-            author: User {
-                id: incoming_message.author_id,
-                name: String::from("fetch_this_from_database"),
-            },
-            chat: chat.to_owned(),
-            body: incoming_message.body,
-            created_at: incoming_message.created_at,
-        })
+        self.messages_repository
+            .create(chat, incoming_message)
+            .await
     }
 
     async fn validate_incoming_message(

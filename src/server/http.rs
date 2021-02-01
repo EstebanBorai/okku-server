@@ -77,7 +77,7 @@ impl Http {
                                 .await
                             {
                                 Ok(_) => {}
-                                Err(e) => {},
+                                Err(e) => {}
                             }
                         } else {
                             Response::message("Invalid token param provided".to_string())

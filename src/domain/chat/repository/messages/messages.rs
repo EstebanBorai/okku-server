@@ -18,7 +18,11 @@ impl MessagesRepository {
         Self { db_pool }
     }
 
-    pub async fn create(&self, chat: Chat, input_proto_message: InputProtoMessageDTO) -> Result<Message> {
+    pub async fn create(
+        &self,
+        chat: Chat,
+        input_proto_message: InputProtoMessageDTO,
+    ) -> Result<Message> {
         let mut rows = sqlx::query(
             r#"
             WITH message AS (
