@@ -1,4 +1,4 @@
-# Contributing to xeed-server
+# Contributing to okku-server
 
 * [Code of Conduct](#code-of-conduct)
 * [Pull Requests](#pull-requests)
@@ -6,16 +6,16 @@
 
 ## [Code of Conduct](./CODE_OF_CONDUCT.md)
 
-The xeed-server project has a [Code of Conduct](./CODE_OF_CONDUCT.md). All
-individuals participating in the xeed-server repo will be expected to abide by the Code of Conduct.
+The okku-server project has a [Code of Conduct](./CODE_OF_CONDUCT.md). All
+individuals participating in the okku-server repo will be expected to abide by the Code of Conduct.
 Violating the Code of Conduct will result in action ranging from a conversation
-about behavior to being permanently banned from the xeed-server repository.
+about behavior to being permanently banned from the okku-server repository.
 
 ### The Spirit of the law
 
 Not all interactions that require remediation are clear violations
 of the Code of Conduct. Project maintainers will take appropriate
-action, when neccessary, to ensure the xeed-server community is a space
+action, when neccessary, to ensure the okku-server community is a space
 where individuals can comfortably collaborate and bring their
 entire selves. Unfortunately, if bringing your entire self is
 infringing on others from doing the same, you may be asked to leave.

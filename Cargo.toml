@@ -1,6 +1,6 @@
 [package]
-name = "xeed-server"
-version = "0.8.0"
+name = "okku-server"
+version = "0.8.1"
 authors = ["Esteban Borai <estebanborai@gmail.com>"]
 edition = "2018"
 

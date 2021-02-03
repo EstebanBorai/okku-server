@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Xeed chat client library",
   "main": "dist/main.js",
-  "repository": "https://github.com/EstebanBorai/xeed-server.git",
+  "repository": "https://github.com/EstebanBorai/okku-server.git",
   "author": "Esteban Borai <estebanborai@gmail.com> (https://github.com/EstebanBorai)",
   "license": "MIT",
   "scripts": {
