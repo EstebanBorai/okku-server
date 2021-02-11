@@ -3,10 +3,10 @@
 HOST="127.0.0.1"
 RUST_LOG="warp,warn,info,error,debug"
 PORT="3000"
-POSTGRES_USER="hoth"
-POSTGRES_PASSWORD="hoth"
-POSTGRES_DB="hoth"
-JWT_SECRET="hoth"
+POSTGRES_USER="okku"
+POSTGRES_PASSWORD="okku"
+POSTGRES_DB="okku"
+JWT_SECRET="okku"
 
 echo -e \
   "HOST=$HOST\n" \

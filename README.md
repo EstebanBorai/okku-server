@@ -4,7 +4,10 @@
   </div>
   <h1 align="center">okku-server</h1>
   <h4 align="center">
-    The Hoth project aims to develop a realtime chat application using WebSocket and asynchronous channels from Tokio. This repository contains the Back-End logic for the application
+    Back-End for Okku realtime chat solution. All the logic related
+    to Okku's features are handled through this server. An instance
+    of this server handles user authentication, media management, chat
+    history as well as connections
   </h4>
 </div>
 

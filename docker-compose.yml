@@ -6,7 +6,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-       - hoth-database:/var/lib/postgresql/data
+       - okku-database:/var/lib/postgresql/data
     env_file:
       - .env
     environment:
@@ -15,4 +15,4 @@ services:
       POSTGRES_DB: "${POSTGRES_DB}"
 
 volumes:
-  hoth-database:
+  okku-database:
