@@ -61,6 +61,8 @@ pub enum Error {
     UserDoesntBelongToChat(Uuid, Uuid),
     #[error("Store message error!")]
     UnableToStoreMessage,
+    #[error("Invalid frontend for chat provided, {0}")]
+    InvalidFrontEnd(String),
 }
 
 impl Reject for Error {}

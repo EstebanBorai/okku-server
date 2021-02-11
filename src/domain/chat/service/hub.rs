@@ -10,7 +10,7 @@ use warp::ws::WebSocket;
 
 use crate::application::service::UserService;
 use crate::domain::chat::dto::InputProtoMessageDTO;
-use crate::domain::chat::entity::{Client, Input, Message, Output, Parcel, Proto};
+use crate::domain::chat::entity::{Client, FrontEnd, Input, Message, Output, Parcel, Proto};
 use crate::domain::chat::{ChatRepository, MessagesRepository};
 use crate::error::Result;
 
@@ -44,13 +44,14 @@ impl HubService {
     pub async fn register_and_listen(
         &self,
         user_id: &Uuid,
+        frontend: FrontEnd,
         web_socket: WebSocket,
         input_tx: UnboundedSender<Proto<Input>>,
     ) -> Result<()> {
         let output_rx = self.subscribe();
         let (sink, stream) = web_socket.split();
         let user = self.user_service.find_by_id(user_id).await?;
-        let client = Client::from(user.clone());
+        let client = Client::new(user.clone(), frontend);
 
         let read_process = client.read_input(stream).try_for_each(|proto| async {
             input_tx.send(proto).unwrap();
@@ -69,7 +70,7 @@ impl HubService {
                     Ok(())
                 });
 
-        if let Err(err) = tokio::select! {
+        if let Err(_) = tokio::select! {
             res = read_process => res,
             res = write_process => res,
         } {}

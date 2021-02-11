@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 use warp::http::{self, StatusCode};
 use warp::Filter;
 
 use crate::application::service::Services;
-use crate::domain::chat::{Input, Proto};
+use crate::domain::chat::{FrontEnd, Input, Proto};
 use crate::infrastructure::database::{get_db_pool, ping};
 use crate::server::utils::Response;
 
@@ -18,6 +19,7 @@ const MAX_FILE_SIZE: u64 = 1_000_000;
 #[derive(Deserialize, Serialize)]
 struct ChatQueryParams {
     pub token: String,
+    pub frontend: Option<String>,
 }
 
 pub struct Http {
@@ -69,20 +71,24 @@ impl Http {
                       qparams: ChatQueryParams,
                       chat_input_tx: UnboundedSender<Proto<Input>>| {
                     ws.on_upgrade(move |web_socket| async move {
-                        if let Ok(claims) = services.auth_service.verify_token(&qparams.token).await
-                        {
-                            match services
-                                .hub_service
-                                .register_and_listen(&claims.user_id, web_socket, chat_input_tx)
-                                .await
-                            {
-                                Ok(_) => {}
-                                Err(e) => {}
+                        if let Some(frontend) = &qparams.frontend {
+                            if let Ok(frontend) = FrontEnd::from_str(frontend.as_str()) {
+                                if let Ok(claims) = services.auth_service.verify_token(&qparams.token).await
+                                {
+                                    return match services
+                                        .hub_service
+                                        .register_and_listen(&claims.user_id, frontend, web_socket, chat_input_tx)
+                                        .await
+                                    {
+                                        Ok(_) => {}
+                                        Err(e) => {}
+                                    }
+                                }
                             }
-                        } else {
+
                             Response::message("Invalid token param provided".to_string())
-                                .status_code(StatusCode::FORBIDDEN)
-                                .reject();
+                                        .status_code(StatusCode::FORBIDDEN)
+                                        .reject();
                         }
                     })
                 },
