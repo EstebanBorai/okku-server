@@ -148,7 +148,26 @@ impl Http {
             .and(with_service(services.clone()))
             .and_then(handler::chats::find_user_chats);
 
-        let get_routes = warp::get().and(login.or(me.or(download_file.or(find_user_chats))));
+        let find_chat = chats
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::path::param())
+            .and_then(handler::chats::find_chat);
+
+        let fetch_chat_messages = chats
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and(warp::path::param())
+            .and(warp::path("messages"))
+            .and_then(handler::chats::fetch_chat_messages);
+
+        let get_routes = warp::get().and(
+            login
+                .or(me)
+                .or(download_file)
+                .or(find_chat.or(fetch_chat_messages))
+                .or(find_user_chats),
+        );
         let post_routes =
             warp::post().and(signup.or(upload_file).or(upload_avatar).or(create_chat));
         let routes = chat_web_socket.or(get_routes.or(post_routes));

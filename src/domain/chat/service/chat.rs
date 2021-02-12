@@ -99,4 +99,8 @@ impl ChatProvider {
             None => Err(Error::ChatNotFound),
         }
     }
+
+    pub async fn fetch_chat_messages(&self, chat_id: &Uuid) -> Result<Vec<Message>> {
+        self.messages_repository.fetch_chat_messages(chat_id).await
+    }
 }

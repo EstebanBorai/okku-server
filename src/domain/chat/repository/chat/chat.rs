@@ -89,10 +89,6 @@ impl ChatRepository {
         Ok(chats)
     }
 
-    pub async fn fetch_messages_from_chat(chat_id: &Uuid) -> Result<Vec<Message>> {
-        todo!()
-    }
-
     /// Creates a SQL query to insert multiple relationships of
     /// chats(id) and users(id) with the provided `participants_ids`
     ///

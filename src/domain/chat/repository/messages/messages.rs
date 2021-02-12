@@ -76,4 +76,28 @@ impl MessagesRepository {
 
         Err(Error::UnableToStoreMessage)
     }
+
+    pub async fn fetch_chat_messages(&self, chat_id: &Uuid) -> Result<Vec<Message>> {
+        let mut messages: Vec<Message> = Vec::new();
+        let mut rows =
+            sqlx::query_file!("sql/fetch_chat_messages.sql", chat_id).fetch(self.db_pool);
+
+        while let Some(row) = rows.try_next().await? {
+            messages.push(Message {
+                id: row.message_id,
+                author: User {
+                    id: row.author_id,
+                    name: row.author_name,
+                },
+                body: row.message_content,
+                chat: Chat {
+                    id: row.chat_id,
+                    participants_ids: vec![],
+                },
+                created_at: row.message_created_at,
+            });
+        }
+
+        Ok(messages)
+    }
 }
