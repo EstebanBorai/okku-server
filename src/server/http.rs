@@ -73,22 +73,28 @@ impl Http {
                     ws.on_upgrade(move |web_socket| async move {
                         if let Some(frontend) = &qparams.frontend {
                             if let Ok(frontend) = FrontEnd::from_str(frontend.as_str()) {
-                                if let Ok(claims) = services.auth_service.verify_token(&qparams.token).await
+                                if let Ok(claims) =
+                                    services.auth_service.verify_token(&qparams.token).await
                                 {
                                     return match services
                                         .hub_service
-                                        .register_and_listen(&claims.user_id, frontend, web_socket, chat_input_tx)
+                                        .register_and_listen(
+                                            &claims.user_id,
+                                            frontend,
+                                            web_socket,
+                                            chat_input_tx,
+                                        )
                                         .await
                                     {
                                         Ok(_) => {}
                                         Err(e) => {}
-                                    }
+                                    };
                                 }
                             }
 
                             Response::message("Invalid token param provided".to_string())
-                                        .status_code(StatusCode::FORBIDDEN)
-                                        .reject();
+                                .status_code(StatusCode::FORBIDDEN)
+                                .reject();
                         }
                     })
                 },
@@ -137,7 +143,12 @@ impl Http {
             .and(warp::body::json())
             .and_then(handler::chats::create_chat);
 
-        let get_routes = warp::get().and(login.or(me.or(download_file)));
+        let find_user_chats = chats
+            .and(with_authorization())
+            .and(with_service(services.clone()))
+            .and_then(handler::chats::find_user_chats);
+
+        let get_routes = warp::get().and(login.or(me.or(download_file.or(find_user_chats))));
         let post_routes =
             warp::post().and(signup.or(upload_file).or(upload_avatar).or(create_chat));
         let routes = chat_web_socket.or(get_routes.or(post_routes));

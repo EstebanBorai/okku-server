@@ -1,17 +1,10 @@
-use futures::StreamExt;
 use std::collections::HashMap;
-use std::default::Default;
-use std::time::Duration;
-use tokio::sync::broadcast::{channel, Receiver, Sender};
-use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::RwLock;
-use tokio::time::delay_for;
 use uuid::Uuid;
 
 use crate::domain::chat::dto::InputProtoMessageDTO;
-use crate::domain::chat::entity::{Chat, Input, Message, Output, Proto};
+use crate::domain::chat::entity::{Chat, Message, Output};
 use crate::domain::chat::{ChatRepository, MessagesRepository};
-use crate::domain::user::User;
 use crate::error::{Error, Result};
 
 pub struct ChatProvider {
@@ -44,7 +37,7 @@ impl ChatProvider {
     }
 
     pub async fn fetch_chats(&self, user_id: &Uuid) -> Result<Vec<Chat>> {
-        todo!()
+        self.chat_repository.fetch_user_chats(user_id).await
     }
 
     pub async fn handle_incoming_message(

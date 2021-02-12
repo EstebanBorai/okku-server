@@ -1,11 +1,9 @@
 use futures::TryStreamExt;
-use sqlx::postgres::{PgRow, Postgres};
 use sqlx::Row;
-use sqlx::Transaction;
-use std::convert::TryInto;
+use std::str::FromStr;
 use uuid::Uuid;
 
-use crate::domain::chat::entity::Chat;
+use crate::domain::chat::entity::{Chat, Message};
 use crate::error::{Error, Result};
 use crate::infrastructure::database::DbPool;
 
@@ -38,7 +36,6 @@ impl ChatRepository {
 
         Ok(Chat {
             id: chat.id,
-            messages: Vec::new(),
             participants_ids,
         })
     }
@@ -66,13 +63,34 @@ impl ChatRepository {
 
         Ok(Chat {
             id: id.clone(),
-            messages: Vec::new(),
             participants_ids,
         })
     }
 
-    pub async fn fetch_chats_by_participant_id(participant_id: &Uuid) -> Result<Vec<Chat>> {
-        todo!();
+    pub async fn fetch_user_chats(&self, user_id: &Uuid) -> Result<Vec<Chat>> {
+        let mut chats: Vec<Chat> = Vec::new();
+        let mut rows = sqlx::query_file!("sql/fetch_user_chats.sql", user_id).fetch(self.db_pool);
+
+        while let Some(row) = rows.try_next().await? {
+            let participants_ids: String = row.users.unwrap();
+            let participants_ids: Vec<Uuid> = participants_ids
+                .split(',')
+                .into_iter()
+                .map(|uid| Uuid::from_str(uid).unwrap())
+                .collect();
+            let chat_id: Uuid = row.chat_id;
+
+            chats.push(Chat {
+                id: chat_id,
+                participants_ids,
+            });
+        }
+
+        Ok(chats)
+    }
+
+    pub async fn fetch_messages_from_chat(chat_id: &Uuid) -> Result<Vec<Message>> {
+        todo!()
     }
 
     /// Creates a SQL query to insert multiple relationships of

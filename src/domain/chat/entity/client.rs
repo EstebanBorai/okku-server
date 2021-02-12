@@ -29,7 +29,7 @@ impl FromStr for FrontEnd {
         match s {
             "browser" => Ok(FrontEnd::Browser),
             "terminal" => Ok(FrontEnd::Terminal),
-            _ => Err(Error::InvalidFrontEnd(s.to_string()))
+            _ => Err(Error::InvalidFrontEnd(s.to_string())),
         }
     }
 }
