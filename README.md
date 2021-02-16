@@ -31,8 +31,6 @@
 
 ## Front-End
 
-Theres two frontend solutions available for this project:
-
 ### [Okku CLI](https://github.com/EstebanBorai/okku-cli)
 
 The Okku CLI offers a terminal based interface for sending and receiving
