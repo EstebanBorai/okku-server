@@ -11,13 +11,6 @@
   </h4>
 </div>
 
-<div align="center">
-
-  ![Build](https://github.com/EstebanBorai/okku-server/workflows/build/badge.svg)
-  ![Lint](https://github.com/EstebanBorai/okku-server/workflows/clippy/fmt/badge.svg)
-
-</div>
-
 ## Index
 
 - [Architecture](#architecture)
@@ -26,6 +19,9 @@
   - [Environment Variables](#environment-variables)
   - [Database](#database)
 - [API Endpoints](#api-endpoints)
+  - [About deprecated endpoints](#about-deprecated-endpoints)
+- [License](#license)
+- [Contributions](#contributions)
 
 ## Architecture
 
@@ -41,12 +37,6 @@ Theres two frontend solutions available for this project:
 
 The Okku CLI offers a terminal based interface for sending and receiving
 text messages.
-
-### [Okku Client](https://github.com/EstebanBorai/okku-client)
-
-The Okku Client is a web solution written in React + TypeScript which makes
-use of native WebSockets to send an receive all kind of media supported
-by this server.
 
 ## Getting Started
 
@@ -302,3 +292,32 @@ cargo run
     </tr>
   </tbody>
 </table>
+
+### About deprecated endpoints
+
+If you look closely to domain directory, you will notice that theres
+logic available for more features which is not exposed to the API.
+
+These logic includes file management and profile details which used to
+be part of a release of this server on a Web Application.
+
+Those features are now deprecated in order to focus on main functionality
+before going any further.
+
+This project is part of my learning journey with Rust and implementing this
+features helped me understand more how the language works and what it has
+to offer.
+
+If you are interested on working on some of these features, from the server
+side or the client side, feel free to reach me via an issue I will be happy
+to help!
+
+## License
+
+This project is licensed under the MIT license
+
+## Contributions
+
+All contributions are welcome! Feel free to open a pull request or an issue
+
+
