@@ -67,16 +67,14 @@ impl FileRepository for Repository {
     }
 
     async fn find_by_filename(&self, filename: &str) -> Result<Vec<u8>> {
-        let mut rows = sqlx::query("SELECT bytes FROM files WHERE filename = $1")
+        let rows = sqlx::query("SELECT bytes FROM files WHERE filename = $1")
             .bind(filename)
-            .fetch(self.db_pool);
+            .fetch_optional(self.db_pool)
+            .await?;
 
-        if let Some(row) = rows.try_next().await? {
-            let bytes = row.try_get("bytes")?;
-
-            return Ok(bytes);
+        match rows {
+            Some(row) => Ok(row.try_get("bytes")?),
+            None => Err(Error::FileNotFound(filename.to_string())),
         }
-
-        Err(Error::FileNotFound(filename.to_string()))
     }
 }
