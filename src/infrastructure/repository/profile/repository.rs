@@ -39,7 +39,7 @@ impl ProfileRepository for Repository {
     }
 
     async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Profile> {
-        let mut rows = sqlx::query(
+        let rows = sqlx::query(
             r#"
             SELECT
                 users.id AS user_id,
@@ -54,21 +54,21 @@ impl ProfileRepository for Repository {
             LEFT JOIN users ON users.id = $1"#,
         )
         .bind(user_id)
-        .fetch(self.db_pool);
+        .fetch_optional(self.db_pool)
+        .await?;
 
-        if let Some(row) = rows.try_next().await? {
-            return Ok(Profile {
-                id: row.try_get("profile_id")?,
-                first_name: row.try_get("first_name")?,
-                email: row.try_get("email")?,
-                birthday: row.try_get("birthday")?,
-                bio: row.try_get("bio")?,
-                surname: row.try_get("surname")?,
+        match rows {
+            Some(rows) => Ok(Profile {
+                id: rows.try_get("profile_id")?,
+                first_name: rows.try_get("first_name")?,
+                email: rows.try_get("email")?,
+                birthday: rows.try_get("birthday")?,
+                bio: rows.try_get("bio")?,
+                surname: rows.try_get("surname")?,
                 avatar: None,
                 contacts: None,
-            });
+            }),
+            None => Err(Error::UserNotFound),
         }
-
-        Err(Error::UserNotFound)
     }
 }
